@@ -1,0 +1,1738 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f1eee7">
+<link rel="icon" href="data:,">
+<title>仓库分区 · 点位图</title>
+<style>
+:root{--bg:#f1eee7;--panel:#fff;--ink:#1e242b;--muted:#6b7280;--line:#e7e1d6}
+*{box-sizing:border-box}
+html,body{height:100%}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+header{padding:18px 24px 6px}
+h1{margin:0;font-size:20px;letter-spacing:.2px}
+.sub{margin-top:4px;color:var(--muted);font-size:12px}
+.toolbar{display:flex;align-items:center;gap:14px;padding:10px 24px 14px;flex-wrap:wrap}
+label.chk{display:flex;align-items:center;gap:6px;color:#4b5563;font-size:13px;cursor:pointer}
+button.ghost,a.ghost{display:inline-flex;align-items:center;border:1px solid #d8d3c8;background:#fff;border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer;color:#374151;text-decoration:none}
+button.ghost:hover,a.ghost:hover{background:#faf8f3}
+button.ghost:disabled{opacity:.45;cursor:default;background:#fff}
+.vsw{display:inline-flex;align-items:center;border:1px solid #d8d3c8;background:#fff;border-radius:8px;padding:2px;gap:2px}
+.vsw button{border:0;background:transparent;border-radius:6px;padding:4px 10px;font:inherit;font-size:12.5px;line-height:1.5;color:#6b7280;cursor:pointer;white-space:nowrap}
+.vsw button:hover{background:#faf8f3}
+.vsw button.on{background:#1f2937;color:#fff}
+.vsw button:disabled{opacity:.45;cursor:default;background:transparent;color:#6b7280}
+.vsw button.on:disabled{background:#1f2937;color:#fff}
+.verloading svg{opacity:.55;transition:opacity .15s}
+details.vdiff{margin-top:6px}
+details.vdiff summary{cursor:pointer;color:#6b7280;font-size:12px;padding:2px 0;list-style:none}
+details.vdiff summary::-webkit-details-marker{display:none}
+details.vdiff summary:before{content:"▸ ";color:#a9a294}
+details.vdiff[open] summary:before{content:"▾ "}
+details.vdiff[open] summary{margin-bottom:4px}
+.hint{margin-left:auto;color:#9ca3af;font-size:12px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;padding:0 24px 24px;height:calc(100vh - 132px);min-height:560px}
+.stage{position:relative;background:var(--panel);border-radius:16px;padding:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.05),0 8px 30px rgba(0,0,0,.05)}
+.zoombar{position:absolute;top:14px;right:14px;z-index:5;display:flex;align-items:center;gap:2px;background:rgba(255,255,255,.94);border:1px solid #e3ddd1;border-radius:10px;padding:4px;box-shadow:0 4px 14px rgba(0,0,0,.07)}
+.zoombar button{height:28px;min-width:30px;border:0;background:transparent;border-radius:7px;font:inherit;font-size:15px;line-height:1;cursor:pointer;color:#374151}
+.zoombar button:hover{background:#f3efe7}
+.zoombar button:disabled{opacity:.3;cursor:default;background:transparent}
+.zoombar #zreset{width:auto;padding:0 9px;font-size:11.5px}
+.zlevel{min-width:38px;text-align:center;font-size:11px;color:#6b7280;font-variant-numeric:tabular-nums}
+svg{width:100%;height:100%;display:block;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+svg.dragging,svg.dragging *{cursor:grabbing!important}
+aside{background:var(--panel);border-radius:16px;padding:18px;overflow:auto;box-shadow:0 1px 2px rgba(0,0,0,.05),0 8px 30px rgba(0,0,0,.05)}
+aside h2{margin:0 0 6px;font-size:18px}
+aside h3{margin:18px 0 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 14px}
+.kpi{background:#f7f4ed;border-radius:10px;padding:8px 10px}
+.kpi b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11px;color:var(--muted)}
+.legend{display:flex;flex-direction:column;gap:4px}
+.lrow{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer}
+.lrow:hover{background:#f7f4ed}
+.lrow.on{background:#f1ece2}
+.sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+.lname{flex:1;min-width:0}
+.lname b{font-weight:600}
+.lname small{display:block;color:var(--muted);font-size:11px}
+.lnum{font-variant-numeric:tabular-nums;color:#4b5563;font-size:11.5px;white-space:nowrap}
+.note{color:#8b857a;font-size:12px;margin-top:14px}
+.sidehead{display:flex;align-items:center;gap:8px;margin:14px 0 6px;font-size:10.5px;color:#8b857a;text-transform:uppercase;letter-spacing:.08em}
+.sidehead:after{content:"";flex:1;height:1px;background:#eee8dd}
+.rows{display:flex;flex-direction:column;gap:1px}
+.row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:12.5px}
+.row:hover{background:#f7f4ed}
+.row.on{background:#f1ece2}
+.row .s{width:22px;color:#9ca3af;font-variant-numeric:tabular-nums;font-size:11px}
+.row .i{width:16px;height:16px;image-rendering:pixelated;object-fit:contain;flex:0 0 auto}
+.row .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .c{color:#9ca3af;font-size:10.5px;font-variant-numeric:tabular-nums}
+.big{font-size:20px;font-weight:650;margin:8px 0 2px}
+.meta{color:var(--muted);font-size:12px;margin-bottom:10px}
+.back{border:0;background:none;padding:0;color:#6b7280;cursor:pointer;font:inherit;font-size:12px;margin-bottom:8px}
+.tip{position:fixed;left:0;top:0;background:#151a20;color:#fff;padding:8px 10px;border-radius:8px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .08s;z-index:99;max-width:300px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.tip .t1{color:#9fb0c3;font-size:10.5px;margin-bottom:2px}
+.tip .t2{font-weight:600}
+.tip .t3{color:#9ca3af;font-size:10.5px;margin-top:2px;word-break:break-all}
+.tex{image-rendering:pixelated;image-rendering:crisp-edges;pointer-events:none;transition:opacity .12s}
+.tex.dim{opacity:.08}
+.slot{cursor:pointer;transition:opacity .12s}
+.slot.dim{opacity:.1}
+.slot.sel{stroke:#111!important;stroke-width:1.2!important}
+.alabel{cursor:pointer;transition:opacity .12s}
+.alabel text{paint-order:stroke;stroke:#fdfcf9;stroke-width:3.2px;stroke-linejoin:round}
+.alabel:hover text{stroke-width:4.2px}
+.alabel.dim{opacity:.22}
+.badge{pointer-events:none;transition:opacity .12s}
+.badge.dim{opacity:.08}
+.nametext{pointer-events:none;transition:opacity .12s}
+.nametext.dim{opacity:.08}
+.err{position:absolute;left:50%;top:16px;transform:translateX(-50%);background:#fdecea;color:#8a1c1c;border:1px solid #f5c2c0;border-radius:10px;padding:9px 14px;font-size:12.5px;z-index:6;max-width:82%;box-shadow:0 8px 24px rgba(0,0,0,.08);line-height:1.6}
+.err button{margin-left:8px;border:1px solid #e3aaa6;background:#fff;border-radius:6px;padding:2px 8px;font:inherit;font-size:11.5px;cursor:pointer}
+.vlist{max-height:320px;overflow:auto;border:1px solid #eee8dd;border-radius:8px;margin-top:8px}
+.vrow{display:flex;align-items:center;gap:8px;padding:4px 8px;font-size:12px;border-bottom:1px solid #f5f1e9}
+.vrow:last-child{border-bottom:0}
+.vrow .v1{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vrow .v2{color:#a9a294;font-size:10.5px;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tagrow{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+.tag{background:#f1ece2;border-radius:999px;padding:3px 9px;font-size:11.5px;color:#4b5563}
+.tag.enchant{background:#f6ecd9;color:#8a5a16}
+.tag.potion{background:#eee6f7;color:#5b3a86}
+.tag.merged{background:#e8f2e6;color:#3f6b3a}
+.special{margin-top:8px;font-size:12px;color:#5f5a52;line-height:1.7}
+.special b{color:#374151}
+.search-overlay{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;padding:10vh 24px 40px;background:rgba(255,255,255,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);overflow:auto}
+.search-overlay.on{display:flex}
+body.search-open{overflow:hidden}
+.search-panel{width:min(780px,94vw);display:flex;flex-direction:column;gap:12px}
+.search-box{display:flex;gap:8px;align-items:center}
+.search-box input{flex:1;height:50px;border:1px solid #d8d3c8;background:rgba(255,255,255,.96);border-radius:14px;padding:0 16px;font:16px/1.4 ui-sans-serif,system-ui,"Segoe UI","Microsoft YaHei",sans-serif;color:#111;outline:none;box-shadow:0 10px 30px rgba(0,0,0,.10)}
+.search-box input:focus{border-color:#9ca3af;box-shadow:0 10px 34px rgba(0,0,0,.14)}
+.search-close{height:50px;border:1px solid #d8d3c8;background:rgba(255,255,255,.96);border-radius:14px;padding:0 16px;font:inherit;cursor:pointer;color:#4b5563}
+.search-close:hover{background:#faf8f3}
+.search-meta{font-size:12px;color:#6b7280;padding:0 4px;min-height:16px}
+.search-results{background:rgba(255,255,255,.95);border:1px solid #e7e1d6;border-radius:14px;box-shadow:0 18px 50px rgba(0,0,0,.14);overflow:auto;max-height:56vh}
+.srow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #f1ece2;cursor:pointer}
+.srow:last-child{border-bottom:0}
+.srow:hover,.srow.on{background:#f7f4ed}
+.srow .si{width:24px;height:24px;image-rendering:pixelated;object-fit:contain;flex:0 0 auto}
+.srow .sm{flex:1;min-width:0}
+.srow .sm b{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow .sm small{display:block;color:#8b857a;font-size:11px;margin-top:1px}
+.srow .ss{color:#9a9488;font-size:11px;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow mark{background:#fde68a;color:inherit;border-radius:2px;padding:0 1px}
+.search-empty{padding:18px;text-align:center;color:#8b857a;font-size:12.5px}
+@media(max-width:980px){main{grid-template-columns:1fr;height:auto}aside{max-height:none}.stage{height:74vh}.hint{display:none}}
+
+/* ---------- 移动端 ---------- */
+.sheet{display:contents}
+.sheetbar{display:none}
+.touchhint{display:none}
+.zoombar .zreset-ico{display:none}
+@media (max-width:860px), (max-height:520px) and (pointer:coarse){
+  body{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
+  header{flex:0 0 auto;padding:10px calc(14px + env(safe-area-inset-right)) 2px calc(14px + env(safe-area-inset-left))}
+  h1{font-size:17px}
+  .sub{margin-top:2px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .toolbar{flex:0 0 auto;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:8px;padding:8px calc(10px + env(safe-area-inset-right)) 8px calc(10px + env(safe-area-inset-left));scrollbar-width:none}
+  .toolbar::-webkit-scrollbar{display:none}
+  .toolbar>*{flex:0 0 auto}
+  .vsw{height:38px;padding:3px;border-radius:999px;background:#fff}
+  .vsw button{height:30px;padding:0 11px;border-radius:999px;font-size:12.5px}
+  label.chk{min-height:38px;padding:0 12px;border:1px solid #ddd7cb;border-radius:999px;background:#fff;font-size:13px;gap:7px;white-space:nowrap}
+  label.chk input{width:15px;height:15px;margin:0;accent-color:#4b5563}
+  button.ghost,a.ghost{min-height:38px;padding:0 14px;border-radius:999px;font-size:13px;white-space:nowrap}
+  .toolbar #searchBtn{position:fixed;right:calc(14px + env(safe-area-inset-right));bottom:calc(72px + env(safe-area-inset-bottom));z-index:40;height:46px;padding:0 18px;border-radius:999px;font-size:14px;border-color:#1f2937;background:#1f2937;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.22)}
+  .toolbar #reset{display:none}
+  .hint{display:none}
+
+  main{display:flex;flex:1 1 auto;min-height:0;padding:0 calc(8px + env(safe-area-inset-right)) calc(68px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left))}
+  .stage{flex:1 1 auto;height:auto;min-height:0;padding:4px;border-radius:14px}
+  .err{top:8px;max-width:94%;font-size:12px;line-height:1.5}
+
+  .zoombar{top:8px;right:8px;flex-direction:column;gap:2px;padding:3px;border-radius:12px}
+  .zoombar button{height:38px;min-width:38px;font-size:17px;border-radius:9px}
+  .zoombar #zreset{width:38px;padding:0;font-size:15px}
+  .zoombar #zreset .zreset-txt{display:none}
+  .zoombar .zreset-ico{display:inline}
+  .zlevel{min-width:0;padding:1px 0;font-size:10.5px}
+
+  .touchhint{display:block;position:absolute;left:10px;bottom:10px;z-index:4;background:rgba(21,26,32,.7);color:#fff;font-size:11px;padding:6px 10px;border-radius:999px;pointer-events:none;transition:opacity .5s}
+  .touchhint.off{opacity:0}
+
+  /* 底部面板 */
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:80;display:flex;flex-direction:column;background:var(--panel);border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);max-height:calc(60px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);overflow:hidden;transition:max-height .28s cubic-bezier(.32,.72,.25,1)}
+  .sheet.open{max-height:calc(58dvh + env(safe-area-inset-bottom))}
+  .sheetbar{display:flex;align-items:center;gap:8px;flex:0 0 60px;height:60px;padding:8px calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));position:relative;cursor:pointer;-webkit-user-select:none;user-select:none}
+  .sheetbar:after{content:"";position:absolute;left:50%;top:6px;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:#ded7c9}
+  .sheetbar .chev{flex:0 0 auto;margin-top:6px;color:#a9a294;font-size:10px;line-height:1;transition:transform .24s}
+  .sheet.open .sheetbar .chev{transform:rotate(180deg)}
+  .sheetbar .sbar-title{margin-top:6px;min-width:0;font-weight:650;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sheetbar .sbar-meta{margin:6px 0 0 auto;max-width:45%;color:var(--muted);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sheet aside{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;border-radius:0;box-shadow:none;background:transparent;padding:2px calc(16px + env(safe-area-inset-right)) 20px calc(16px + env(safe-area-inset-left))}
+
+  aside h2{display:none}
+  aside h3{margin:16px 0 6px}
+  .kpi b{font-size:18px}
+  .lrow{min-height:46px;padding:8px}
+  .row{min-height:46px;padding:6px 8px;font-size:13px}
+  .vlist{max-height:none}
+  .back{padding:10px 0;font-size:13px}
+  .special{font-size:12px}
+
+  /* 搜索 */
+  .search-overlay{padding:calc(10px + env(safe-area-inset-top)) 10px 0;overflow:hidden}
+  .search-panel{width:100%;height:100%;min-height:0;gap:10px}
+  .search-box{flex:0 0 auto}
+  .search-box input{height:46px;border-radius:12px;font-size:16px}
+  .search-close{height:46px;border-radius:12px;padding:0 14px}
+  .search-meta{min-height:0}
+  .search-results{flex:1 1 auto;min-height:0;max-height:none;border-radius:12px;margin-bottom:calc(10px + env(safe-area-inset-bottom))}
+  .srow{display:grid;grid-template-columns:24px minmax(0,1fr);column-gap:10px;row-gap:2px;align-content:center;padding:10px 12px;min-height:52px}
+  .srow .si{grid-row:1/span 2;align-self:center;width:24px;height:24px;margin:0}
+  .srow .sm{grid-column:2}
+  .srow .ss{grid-column:2;max-width:none;font-size:11px}
+}
+@media(max-width:390px){
+  h1{font-size:16px}
+  .sub{font-size:10.5px}
+  .sheetbar .sbar-meta{max-width:36%}
+  label.chk{padding:0 9px;font-size:12.5px;gap:5px}
+}
+@media (max-width:860px) and (max-height:700px), (max-height:520px) and (pointer:coarse){
+  .zoombar button{height:32px;min-width:32px;font-size:15px}
+  .zoombar #zreset{width:32px}
+  .zlevel{font-size:10px}
+  main:has(.sheet.open) .zoombar{display:none}
+}
+@media (max-height:520px) and (pointer:coarse){
+  header{padding-top:6px}
+  .sub{display:none}
+  h1{font-size:15px}
+  .toolbar{padding-top:4px;padding-bottom:6px}
+  .toolbar #searchBtn{height:40px;font-size:13px;bottom:calc(66px + env(safe-area-inset-bottom))}
+  .sheet.open{max-height:calc(62dvh + env(safe-area-inset-bottom))}
+}
+
+/* ---------- 数据导入 / 导出 ---------- */
+.data-overlay{position:fixed;inset:0;z-index:210;display:none;align-items:flex-start;justify-content:center;padding:9vh 24px 40px;background:rgba(255,255,255,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);overflow:auto}
+.data-overlay.on{display:flex}
+body.data-open{overflow:hidden}
+.data-panel{width:min(680px,94vw);background:#fff;border:1px solid #e7e1d6;border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.16);padding:18px;display:flex;flex-direction:column;gap:12px}
+.data-head{display:flex;align-items:center;gap:10px}
+.data-head h2{margin:0;font-size:18px;flex:1}
+.data-close{border:1px solid #d8d3c8;background:#fff;border-radius:8px;padding:5px 11px;font:inherit;font-size:12.5px;color:#4b5563;cursor:pointer}
+.data-close:hover{background:#faf8f3}
+.data-source{font-size:12px;color:#6b7280;word-break:break-all}
+.data-stats{font-size:12px;color:#4b5563}
+.data-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.data-action{border:1px solid #d8d3c8;background:#fff;border-radius:9px;padding:10px 12px;font:inherit;font-size:13px;color:#374151;cursor:pointer;text-align:center}
+.data-action:hover{background:#faf8f3}
+.data-action.primary{background:#1f2937;border-color:#1f2937;color:#fff}
+.data-action.primary:hover{background:#111827}
+.data-action.danger{color:#8a1c1c;border-color:#e3aaa6;background:#fff7f6}
+.data-action.danger:hover{background:#fdecea}
+.data-action.data-wide{grid-column:1/-1}
+.data-action:disabled{opacity:.45;cursor:default;background:#fff;color:#6b7280;border-color:#e3ddd1}
+.data-action.primary:disabled{background:#1f2937;color:#fff}
+.data-note{font-size:12px;color:#8b857a;line-height:1.65}
+.data-note b{color:#4b5563;font-weight:600}
+.data-message{font-size:12.5px;line-height:1.6;color:#374151;white-space:pre-wrap;min-height:18px}
+.data-list{max-height:38vh;overflow:auto;border:1px solid #eee8dd;border-radius:8px;padding:6px 9px;font-size:12px;line-height:1.55;background:#fcfbf8}
+.data-list .item{padding:3px 0;border-bottom:1px solid #f1ece2;word-break:break-word}
+.data-list .item:last-child{border-bottom:0}
+.data-list .item.err{color:#8a1c1c}
+.data-list .item.warn{color:#8a5a16}
+.data-foot{display:flex;justify-content:flex-end;min-height:28px}
+.data-copy{border:1px solid #d8d3c8;background:#fff;border-radius:8px;padding:5px 11px;font:inherit;font-size:12px;color:#4b5563;cursor:pointer}
+.data-copy:hover{background:#faf8f3}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(16px);z-index:220;background:#151a20;color:#fff;padding:9px 14px;border-radius:10px;font-size:12.5px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;max-width:90vw;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.22)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:860px), (max-height:520px) and (pointer:coarse){
+  .data-overlay{padding:0;align-items:stretch}
+  .data-panel{width:100%;min-height:100%;border-radius:0;border:0;padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));overflow:auto;gap:10px}
+  .data-actions{grid-template-columns:1fr}
+  .data-list{max-height:none;flex:1 1 auto}
+  .data-foot{flex:0 0 auto}
+  .toast{bottom:calc(78px + env(safe-area-inset-bottom))}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>仓库分区 · 点位图</h1>
+  <div class="sub" id="sub">正在加载点位…</div>
+</header>
+<div class="toolbar">
+  <div class="vsw" id="verSwitch" role="group" aria-label="版本切换">
+    <button type="button" data-ver="v1" aria-pressed="false" title="冻结快照，只读对比">v1 · 冻结</button>
+    <button type="button" data-ver="v2" class="on" aria-pressed="true" title="当前工作版本，重新布局在 v2 进行">v2 · 当前</button>
+    <button type="button" data-ver="imported" aria-pressed="false" hidden title="导入视图（浏览器暂存，可删除）">导入</button>
+  </div>
+  <label class="chk" title="显示代表物材质"><input type="checkbox" id="showTex" checked> 显示材质</label>
+  <label class="chk"><input type="checkbox" id="hideEmpty"> 隐藏空位</label>
+  <label class="chk" title="在货位前方显示 bot 站位与朝向"><input type="checkbox" id="showPoints"> 显示站位点</label>
+  <button class="ghost" id="reset">清除选择</button>
+  <button class="ghost" id="searchBtn" disabled>搜索物品</button>
+  <button class="ghost" id="dataBtn" disabled title="导入 / 导出点位数据">数据</button>
+  <a class="ghost" id="unmappedLink" href="未收录物品.html" target="_blank" rel="noopener">未收录物品 112</a>
+  <div class="hint" id="hint">滚轮缩放 · 拖动平移 · 悬停看单元 · 点击看变体</div>
+</div>
+<main>
+  <div class="stage">
+    <div class="zoombar" aria-label="缩放控制">
+      <button id="zout" title="缩小 (-)">−</button>
+      <span class="zlevel" id="zlevel">100%</span>
+      <button id="zin" title="放大 (+)">+</button>
+      <button id="zreset" title="重置缩放 (0)"><span class="zreset-ico" aria-hidden="true">⟲</span><span class="zreset-txt">重置缩放</span></button>
+    </div>
+    <div id="err" class="err" style="display:none"></div>
+    <svg id="plan"></svg>
+    <div class="touchhint" id="touchHint">双指缩放 · 拖动平移 · 点按查看</div>
+  </div>
+  <div class="sheet" id="sheet">
+    <div class="sheetbar" id="sheetBar" role="button" tabindex="0" aria-expanded="false" aria-controls="side">
+      <span class="chev" aria-hidden="true">▲</span>
+      <span class="sbar-title" id="sheetTitle">分区概览</span>
+      <span class="sbar-meta" id="sheetMeta"></span>
+    </div>
+    <aside id="side"></aside>
+  </div>
+</main>
+<div id="searchOverlay" class="search-overlay" role="dialog" aria-modal="true" aria-label="搜索物品">
+  <div class="search-panel">
+    <div class="search-box">
+      <input id="searchInput" type="search" autocomplete="off" spellcheck="false" placeholder="搜索物品名 / 物品 ID / 单元名…">
+      <button class="search-close" id="searchClose">关闭</button>
+    </div>
+    <div class="search-meta" id="searchMeta"></div>
+    <div class="search-results" id="searchResults"></div>
+  </div>
+</div>
+<div id="dataOverlay" class="data-overlay" role="dialog" aria-modal="true" aria-labelledby="dataTitle">
+  <div class="data-panel">
+    <div class="data-head">
+      <h2 id="dataTitle">点位数据</h2>
+      <button class="data-close" id="dataClose" aria-label="关闭">关闭</button>
+    </div>
+    <div class="data-source" id="dataSource"></div>
+    <div class="data-stats" id="dataStats"></div>
+    <div class="data-actions">
+      <button class="data-action primary" id="exportXlsx">导出 Excel</button>
+      <button class="data-action" id="exportJson">导出 JSON</button>
+      <button class="data-action" id="importBtn">导入 Excel / JSON</button>
+      <button class="data-action" id="restoreDisk">重新读取 v2</button>
+      <button class="data-action danger data-wide" id="deleteImported" hidden>删除导入视图</button>
+    </div>
+    <div class="data-note">导入生成独立的「导入」视图，不修改 v1/v2；删除视图只清浏览器暂存。导入视图导出为 <b>itemsorter-points-imported.json</b>，写入 bot 时改名替换 <b>config/itemsorter-points.json</b>。</div>
+    <div class="data-message" id="dataMessage" aria-live="polite"></div>
+    <div class="data-list" id="dataList" hidden></div>
+    <div class="data-foot"><button class="data-copy" id="copyData" hidden>复制清单</button></div>
+  </div>
+</div>
+<input type="file" id="importFile" accept=".json,.xlsx,.xls,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden>
+<div id="tip" class="tip"></div>
+<div id="toast" class="toast" aria-live="polite"></div>
+<script src="assets/points-io.js"></script>
+<script src="assets/xlsx.full.min.js"></script>
+<script>
+const SLOTS = __SLOTS__;
+const TEX = __TEX__;
+const ITEM_CN = __ITEM_CN__;
+const AREAS = __AREAS__;
+const IMPORTED_VER = 'imported';
+const DATA_CACHE_KEY = 'warehouse-partition.imported-view.v1';
+const LEGACY_DATA_CACHE_KEY = 'warehouse-partition.imported-v2.v1';
+const DATA_CACHE_SCHEMA = 1;
+const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
+
+const NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('plan');
+const tip = document.getElementById('tip');
+const side = document.getElementById('side');
+const searchOverlay = document.getElementById('searchOverlay');
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+const searchMeta = document.getElementById('searchMeta');
+const searchBtn = document.getElementById('searchBtn');
+const sheet = document.getElementById('sheet');
+const sheetBar = document.getElementById('sheetBar');
+const sheetTitle = document.getElementById('sheetTitle');
+const sheetMeta = document.getElementById('sheetMeta');
+const dataBtn = document.getElementById('dataBtn');
+const dataOverlay = document.getElementById('dataOverlay');
+const dataClose = document.getElementById('dataClose');
+const dataSource = document.getElementById('dataSource');
+const dataStats = document.getElementById('dataStats');
+const dataMessage = document.getElementById('dataMessage');
+const dataList = document.getElementById('dataList');
+const dataCopy = document.getElementById('copyData');
+const exportXlsxBtn = document.getElementById('exportXlsx');
+const exportJsonBtn = document.getElementById('exportJson');
+const importBtn = document.getElementById('importBtn');
+const importFile = document.getElementById('importFile');
+const restoreDiskBtn = document.getElementById('restoreDisk');
+const deleteImportedBtn = document.getElementById('deleteImported');
+const toastEl = document.getElementById('toast');
+const verSwitch = document.getElementById('verSwitch');
+const verButtons = [...verSwitch.querySelectorAll('button[data-ver]')];
+const VER_FILES = {v1:'../data/points/itemsorter-points-v1.json', v2:'../data/points/itemsorter-points-v2.json', imported:'导入视图（浏览器暂存）'};
+const VER_NAMES = {v1:'v1 冻结快照', v2:'v2 工作版本', imported:'导入视图'};
+const phoneMQ = window.matchMedia('(max-width:860px),(max-height:520px) and (pointer:coarse)');
+const SHORT_MQ = window.matchMedia('(max-height:520px) and (pointer:coarse)');
+const CAN_HOVER = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+const MINX = 5145, MAXX = 5318, MINZ = -37799, MAXZ = -37626, M = 14, S = 5;
+const W = (MAXX - MINX + 1 + 2 * M) * S;
+const H = (MAXZ - MINZ + 1 + 2 * M) * S;
+const px = x => (x - MINX + M) * S;
+const py = z => (z - MINZ + M) * S;
+
+const slots = SLOTS.map(d => ({a:d[0], s:d[1], i:d[2], bx:d[3], bz:d[4], px:d[5], ptY:d[6], pz:d[7], yaw:d[8], pitch:d[9] ?? 0}));
+const areaSlots = {A:[],B:[],C:[],D:[],E:[],F:[],G:[],H:[]};
+for (const s of slots) areaSlots[s.a].push(s);
+const slotByPoint = new Map();
+for (const s of slots) slotByPoint.set(s.px.toFixed(2) + ',' + s.pz.toFixed(2), s);
+const SLOT_POINTS = slots.map(s => ({area:s.a, side:s.s, slot:s.i, x:s.px, y:s.ptY, z:s.pz, yaw:s.yaw, pitch:s.pitch}));
+const IO = (window.PointsIO && window.PointsIO.create({slots:SLOT_POINTS, itemCn:ITEM_CN, areas:AREAS})) || null;
+
+let units = [];
+let unitBySlot = new Map();
+let ruleCount = 0;
+let specialPoints = {};
+let currentVer = 'v2';
+function areaTheme(a) {
+  const info = AREAS[a];
+  if (!info) return '';
+  return currentVer === 'v1' && info.themeV1 ? info.themeV1 : info.theme;
+}
+let loadedVer = null;
+let loadingVer = null;
+const versionData = new Map();
+let v1ByLabel = new Map();
+let versionDiff = null;
+let searchIndex = [];
+let searchHitsList = [];
+let searchActive = -1;
+let selectedArea = null, selectedUnit = null, selectedSlot = null;
+let showTextures = true, hideEmpty = false, showPoints = false;
+let importedView = null;
+let dataBusy = false;
+let lastDataListText = '';
+let toastTimer = null;
+
+function add(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  (parent || svg).appendChild(e);
+  return e;
+}
+function itemOfMatch(m) {
+  if (m.name) return m.name.replace(/^minecraft:/, '');
+  if (m.enchantments) return 'enchanted_book';
+  if (m.effects || m.potionId !== undefined) return 'potion';
+  return '';
+}
+function unitType(rules, label) {
+  if (rules.some(r => r.match.enchantments) || /^附魔/.test(label || '')) return 'enchant';
+  if (rules.some(r => r.match.effects || r.match.potionId !== undefined) || /^药水/.test(label || '')) return 'potion';
+  return 'item';
+}
+function texPath(id) {
+  const t = TEX[id];
+  if (!t) return null;
+  return t.item || t.block;
+}
+function iconItem(u) {
+  return u.items.find(id => texPath(id)) || null;
+}
+function texFor(u) {
+  const id = iconItem(u);
+  return id ? texPath(id) : null;
+}
+function isMerged(u) {
+  return u.items.length > 1;
+}
+const FORM_CN = {potion:'普通药水', splash_potion:'喷溅药水', lingering_potion:'滞留药水', tipped_arrow:'药水箭'};
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+function variantLabel(m, u) {
+  if (m.enchantments) {
+    const [, lv] = Object.entries(m.enchantments)[0];
+    return `${(u.label || '').replace(/^附魔·/, '')} ${ROMAN[lv] || lv}`;
+  }
+  if (m.effects) {
+    const form = (m.name || '').replace(/^minecraft:/, '');
+    return `${FORM_CN[form] || form} · ${(u.label || '').replace(/^药水·/, '')}`;
+  }
+  if (m.potionId !== undefined) return `${u.label} · id ${m.potionId}`;
+  if (m.name) {
+    const id = m.name.replace(/^minecraft:/, '');
+    return ITEM_CN[id] || id;
+  }
+  return '兜底';
+}
+function variantSub(m, u) {
+  if (m.enchantments) return Object.keys(m.enchantments)[0];
+  if (m.effects) return `${(m.name || '').replace(/^minecraft:/, '')} · effect ${m.effects.join(',')}`;
+  if (m.potionId !== undefined) return m.name || 'potion';
+  if (m.name) return m.name.replace(/^minecraft:/, '');
+  return '';
+}
+
+function computeUnits(rules) {
+  const groups = new Map();
+  for (const r of rules) {
+    const p = r.point;
+    const key = `${p.x},${p.y},${p.z},${p.yaw},${p.pitch}`;
+    if (!groups.has(key)) groups.set(key, {p, rules: []});
+    groups.get(key).rules.push(r);
+  }
+  const list = [...groups.values()].map(g => {
+    const p = g.p;
+    const slot = slotByPoint.get(Number(p.x).toFixed(2) + ',' + Number(p.z).toFixed(2));
+    const firstItem = itemOfMatch(g.rules[0].match);
+    return {
+      p, rules: g.rules, area: p.area || (slot ? slot.a : ''), side: p.side || (slot ? slot.s : ''),
+      slot: slot ? slot.i : null, slotRef: slot || null,
+      label: p.label || firstItem || '未命名',
+      firstItem, type: unitType(g.rules, p.label), count: g.rules.length,
+      items: [...new Set(g.rules.map(r => itemOfMatch(r.match)).filter(Boolean))],
+    };
+  }).sort((a, b) => (a.area + a.side).localeCompare(b.area + b.side) || (a.slot || 99) - (b.slot || 99));
+  const bySlot = new Map();
+  for (const u of list) if (u.slot) bySlot.set(`${u.area}-${u.side}-${u.slot}`, u);
+  return {units: list, bySlot, ruleCount: rules.length};
+}
+function buildUnits(rules) {
+  const r = computeUnits(rules);
+  units = r.units;
+  unitBySlot = r.bySlot;
+  ruleCount = r.ruleCount;
+  buildSearchIndex();
+}
+function unitSlotText(u) {
+  return `${u.area}-${u.side} #${u.slot ?? '?'}`;
+}
+function diffUnits(base, next) {
+  const b = new Map(base.map(u => [u.label, u]));
+  const n = new Map(next.map(u => [u.label, u]));
+  const moved = [], added = [], removed = [];
+  for (const u of next) {
+    const o = b.get(u.label);
+    if (!o) added.push(u);
+    else if (o.area !== u.area || o.side !== u.side || o.slot !== u.slot) moved.push({u, b: o});
+  }
+  for (const o of base) if (!n.has(o.label)) removed.push(o);
+  moved.sort((x, y) => unitSlotText(x.u).localeCompare(unitSlotText(y.u)));
+  added.sort((x, y) => unitSlotText(x).localeCompare(unitSlotText(y)));
+  removed.sort((x, y) => unitSlotText(x).localeCompare(unitSlotText(y)));
+  return {moved, added, removed};
+}
+function recomputeDiff() {
+  versionDiff = null;
+  v1ByLabel = new Map();
+  if (!versionData.has('v1')) return;
+  const base = computeUnits(versionData.get('v1').items).units;
+  v1ByLabel = new Map(base.map(u => [u.label, u]));
+  if (currentVer === 'v1') return;
+  const current = versionData.get(currentVer);
+  if (!current || !Array.isArray(current.items)) return;
+  const next = computeUnits(current.items).units;
+  versionDiff = diffUnits(base, next);
+}
+function diffCount() {
+  if (!versionDiff) return 0;
+  return versionDiff.moved.length + versionDiff.added.length + versionDiff.removed.length;
+}
+function diffSummaryText() {
+  if (currentVer === 'v1') return '基准版本';
+  if (!versionData.has('v1')) return 'v1 未加载';
+  if (!versionDiff) return '对比 v1 —';
+  const n = diffCount();
+  if (!n) return '与 v1 相同';
+  return `相对 v1：移动 ${versionDiff.moved.length} · 新增 ${versionDiff.added.length} · 移除 ${versionDiff.removed.length}`;
+}
+
+function buildSearchIndex() {
+  searchIndex = units.map(u => {
+    const names = u.items.map(i => ITEM_CN[i] || i);
+    const ench = [];
+    for (const r of u.rules) {
+      if (r.match.enchantments) ench.push(...Object.keys(r.match.enchantments));
+    }
+    const text = [u.label, areaTheme(u.area), ...names, ...u.items, ...ench].join(' ').toLowerCase();
+    return {u, names, text, ench};
+  });
+}
+
+function escapeRegExp(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function highlightText(s, tokens) {
+  let out = escapeHtml(s);
+  for (const t of tokens) {
+    if (!t) continue;
+    out = out.replace(new RegExp('(' + escapeRegExp(escapeHtml(t)) + ')', 'gi'), '<mark>$1</mark>');
+  }
+  return out;
+}
+function scoreText(text, q) {
+  if (!text) return -1;
+  if (text === q) return 100;
+  if (text.startsWith(q)) return 82;
+  if (text.includes(q)) return 58;
+  return -1;
+}
+function scoreUnit(entry, q) {
+  const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return -1;
+  const u = entry.u;
+  let total = 0;
+  for (const t of tokens) {
+    let best = scoreText(u.label.toLowerCase(), t) * 1.35;
+    for (const id of u.items) {
+      best = Math.max(best, scoreText((ITEM_CN[id] || '').toLowerCase(), t), scoreText(id.toLowerCase(), t) * 0.95);
+    }
+    for (const k of entry.ench) best = Math.max(best, scoreText(k.toLowerCase(), t) * 0.9);
+    best = Math.max(best, scoreText(areaTheme(u.area).toLowerCase(), t) * 0.6);
+    if (best < 0) return -1;
+    total += best;
+  }
+  return total - (u.slot || 0) * 0.01;
+}
+function matchedNames(entry, tokens) {
+  const hits = [];
+  for (const id of entry.u.items) {
+    const cn = ITEM_CN[id] || id;
+    if (tokens.some(t => cn.toLowerCase().includes(t) || id.toLowerCase().includes(t))) hits.push(cn);
+  }
+  return [...new Set(hits)].slice(0, 6);
+}
+function renderSearch(value) {
+  const q = value.trim().replace(/^minecraft:/i, '');
+  const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+  searchActive = -1;
+  if (!q) {
+    searchHitsList = [];
+    searchMeta.textContent = '输入物品名、物品 ID 或单元名；空格分隔多个关键词';
+    searchResults.innerHTML = '';
+    return;
+  }
+  const scored = searchIndex
+    .map(s => ({s, score: scoreUnit(s, q)}))
+    .filter(x => x.score >= 0)
+    .sort((a, b) => b.score - a.score
+      || (a.s.u.area + a.s.u.side).localeCompare(b.s.u.area + b.s.u.side)
+      || (a.s.u.slot || 99) - (b.s.u.slot || 99))
+    .slice(0, 60);
+  searchHitsList = scored.map(x => x.s.u);
+  searchMeta.textContent = scored.length ? `找到 ${scored.length} 个存储单元` : '没有匹配的存储单元';
+  if (!scored.length) {
+    searchResults.innerHTML = '<div class="search-empty">没有匹配项</div>';
+    return;
+  }
+  searchResults.innerHTML = scored.map(({s}, i) => {
+    const u = s.u;
+    const icon = texFor(u);
+    const hits = matchedNames(s, tokens);
+    const snip = (hits.length ? hits : u.items.slice(0, 4).map(id => ITEM_CN[id] || id))
+      .map(n => highlightText(n, tokens)).join(' / ');
+    const tag = u.type === 'enchant' ? '附魔' : u.type === 'potion' ? '药水' : '物品';
+    return `<div class="srow" data-idx="${i}">
+      ${icon ? `<img class="si" src="${icon}" alt="">` : ''}
+      <span class="sm"><b>${highlightText(u.label, tokens)}</b><small>${u.area} · ${u.side} #${u.slot || '-'} · ${tag}${isMerged(u) ? ' · 合并 ' + u.items.length + ' 项' : ''} · ${u.count} 条规则</small></span>
+      <span class="ss">${snip}</span>
+    </div>`;
+  }).join('');
+}
+function setSearchActive(i) {
+  const rows = [...searchResults.querySelectorAll('.srow')];
+  if (!rows.length) return;
+  searchActive = Math.max(0, Math.min(rows.length - 1, i));
+  rows.forEach((r, j) => r.classList.toggle('on', j === searchActive));
+  rows[searchActive].scrollIntoView({block:'nearest'});
+}
+function openSearch() {
+  if (!units.length) return;
+  hideTip();
+  searchOverlay.classList.add('on');
+  document.body.classList.add('search-open');
+  searchInput.value = '';
+  renderSearch('');
+  requestAnimationFrame(() => searchInput.focus());
+}
+function closeSearch() {
+  searchOverlay.classList.remove('on');
+  document.body.classList.remove('search-open');
+  searchInput.blur();
+  hideTip();
+}
+function chooseSearch(idx) {
+  const u = searchHitsList[idx];
+  if (!u) return;
+  closeSearch();
+  selectUnit(u);
+  focusArea(u.area);
+}
+
+// ---------- 数据导入 / 导出 ----------
+function formatStamp(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function dataSourceText() {
+  if (!loadedVer) return '等待点位数据加载…';
+  if (currentVer === IMPORTED_VER) {
+    const m = importedView?.meta || {};
+    return `导入视图 · ${m.fileName || '文件'}（${formatStamp(m.importedAt)}）`;
+  }
+  return currentVer === 'v2' ? 'v2 · 磁盘 itemsorter-points-v2.json' : 'v1 · 磁盘 itemsorter-points-v1.json';
+}
+function updateDataUI() {
+  if (!dataSource) return;
+  dataSource.textContent = dataSourceText();
+  if (!IO) {
+    dataStats.textContent = '导入导出组件未加载（assets/points-io.js）';
+  } else if (!window.XLSX) {
+    dataStats.textContent = `${units.length} 单元 / ${ruleCount} 规则；Excel 组件未加载，JSON 可用`;
+  } else {
+    dataStats.textContent = `${units.length} 单元 / ${ruleCount} 规则 / 占用 ${units.filter(u => u.slot).length} 格`;
+  }
+  const busy = dataBusy || !!loadingVer;
+  exportXlsxBtn.disabled = busy || !IO || !window.XLSX || !loadedVer;
+  exportJsonBtn.disabled = busy || !IO || !loadedVer;
+  importBtn.disabled = busy || !IO;
+  restoreDiskBtn.disabled = busy || !loadedVer;
+  restoreDiskBtn.textContent = '重新读取 v2';
+  deleteImportedBtn.hidden = !importedView;
+  deleteImportedBtn.disabled = busy || !importedView;
+  deleteImportedBtn.title = importedView
+    ? `删除导入视图：${importedView.meta?.fileName || '文件'}（${formatStamp(importedView.meta?.importedAt)}）`
+    : '';
+  if (!loadedVer) dataStats.textContent = '正在加载点位…';
+}
+function openData() {
+  hideTip();
+  closeSearch();
+  renderDataMessages({});
+  dataOverlay.classList.add('on');
+  document.body.classList.add('data-open');
+  updateDataUI();
+  requestAnimationFrame(() => dataClose.focus());
+}
+function closeData() {
+  dataOverlay.classList.remove('on');
+  document.body.classList.remove('data-open');
+  if (dataBtn) dataBtn.focus();
+}
+function setDataBusy(on) {
+  dataBusy = on;
+  updateDataUI();
+}
+function showToast(text) {
+  if (!toastEl) return;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastEl.textContent = text;
+  toastEl.classList.add('on');
+  toastTimer = setTimeout(() => { toastEl.classList.remove('on'); toastTimer = null; }, 3600);
+}
+function renderDataMessages({ message = '', errors = [], warnings = [] } = {}) {
+  if (!dataMessage) return;
+  dataMessage.textContent = message;
+  const items = [
+    ...errors.map(e => ({ type: 'err', path: e.path || '', message: e.message || String(e) })),
+    ...warnings.map(e => ({ type: 'warn', path: e.path || '', message: e.message || String(e) })),
+  ];
+  if (!items.length) {
+    dataList.hidden = true;
+    dataList.innerHTML = '';
+    dataCopy.hidden = true;
+    lastDataListText = '';
+    return;
+  }
+  const shown = items.slice(0, 200);
+  dataList.hidden = false;
+  dataList.innerHTML = shown.map(e => `<div class="item ${e.type}">${escapeHtml(e.path ? e.path + '：' : '')}${escapeHtml(e.message)}</div>`).join('')
+    + (items.length > shown.length ? `<div class="item">还有 ${items.length - shown.length} 条…</div>` : '');
+  dataCopy.hidden = false;
+  lastDataListText = items.map(e => `${e.type === 'err' ? '[错误]' : '[警告]'} ${e.path ? e.path + '：' : ''}${e.message}`).join('\n');
+}
+function copyDataMessages() {
+  if (!lastDataListText) return;
+  const done = () => showToast('清单已复制');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(lastDataListText).then(done, () => showToast('复制失败'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = lastDataListText;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); } catch (_) { showToast('复制失败'); }
+    ta.remove();
+  }
+}
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+function currentData() { return versionData.get(currentVer) || null; }
+function currentMeta() {
+  return {
+    version: currentVer,
+    versionName: VER_NAMES[currentVer] || currentVer,
+    source: dataSourceText(),
+    exportedAt: formatStamp(new Date().toISOString()),
+  };
+}
+function exportExcel() {
+  const data = currentData();
+  if (!data) { renderDataMessages({ message: '当前版本数据未加载' }); return; }
+  if (!IO) { renderDataMessages({ message: 'assets/points-io.js 未加载' }); return; }
+  if (!window.XLSX) { renderDataMessages({ message: 'assets/xlsx.full.min.js 未加载' }); return; }
+  setDataBusy(true);
+  renderDataMessages({ message: '正在生成 Excel…' });
+  try {
+    const wb = IO.buildWorkbook(data, currentMeta(), window.XLSX);
+    const buf = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const tag = currentVer === 'v1' ? 'v1' : currentVer === IMPORTED_VER ? '导入' : 'v2';
+    const name = `仓库分区点位-${tag}.xlsx`;
+    downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name);
+    renderDataMessages({ message: `已导出 ${name}` });
+    showToast(`已导出 ${name}`);
+  } catch (e) {
+    renderDataMessages({
+      message: '导出失败',
+      errors: (e.validation && e.validation.errors) || [{ path: '导出', message: e.message }],
+      warnings: (e.validation && e.validation.warnings) || [],
+    });
+  } finally {
+    setDataBusy(false);
+  }
+}
+function exportJson() {
+  const data = currentData();
+  if (!data) { renderDataMessages({ message: '当前版本数据未加载' }); return; }
+  if (!IO) { renderDataMessages({ message: 'assets/points-io.js 未加载' }); return; }
+  setDataBusy(true);
+  renderDataMessages({ message: '正在生成 JSON…' });
+  try {
+    const text = IO.buildJson(data);
+    const name = currentVer === 'v1' ? 'itemsorter-points-v1.json'
+      : currentVer === IMPORTED_VER ? 'itemsorter-points-imported.json'
+      : 'itemsorter-points.json';
+    downloadBlob(new Blob([text], { type: 'application/json;charset=utf-8' }), name);
+    renderDataMessages({ message: `已导出 ${name}` });
+    showToast(`已导出 ${name}`);
+  } catch (e) {
+    renderDataMessages({
+      message: '导出失败',
+      errors: (e.validation && e.validation.errors) || [{ path: '导出', message: e.message }],
+      warnings: (e.validation && e.validation.warnings) || [],
+    });
+  } finally {
+    setDataBusy(false);
+  }
+}
+function triggerImport() {
+  if (dataBusy) return;
+  importFile.value = '';
+  importFile.click();
+}
+async function handleImportFile(file) {
+  if (!file) return;
+  if (!IO) { renderDataMessages({ message: 'assets/points-io.js 未加载' }); return; }
+  if (file.size > MAX_IMPORT_BYTES) {
+    renderDataMessages({ message: `文件超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)} MB，已拒绝` });
+    return;
+  }
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (!['json', 'xlsx', 'xls'].includes(ext)) {
+    renderDataMessages({ message: '仅支持 .json / .xlsx / .xls' });
+    return;
+  }
+  if (importedView && !window.confirm('当前已有导入视图，继续导入将替换它。继续？')) return;
+  setDataBusy(true);
+  renderDataMessages({ message: `正在读取 ${file.name}…` });
+  try {
+    let result;
+    if (ext === 'json') {
+      result = IO.parseJson(await file.text());
+    } else {
+      if (!window.XLSX) throw new Error('assets/xlsx.full.min.js 未加载');
+      result = IO.parseWorkbook(await file.arrayBuffer(), window.XLSX, { type: 'array' });
+    }
+    if (result.errors.length) {
+      renderDataMessages({
+        message: `导入失败：${result.errors.length} 处错误；当前数据未改变`,
+        errors: result.errors,
+        warnings: result.warnings,
+      });
+      return;
+    }
+    await applyImportedData(result.data, {
+      fileName: file.name,
+      importedAt: new Date().toISOString(),
+      source: ext,
+    });
+    const s = result.stats || { rules: 0, units: 0, occupied: 0 };
+    const summary = `导入成功：${s.units} 单元 / ${s.rules} 规则 / 占用 ${s.occupied} 格`;
+    if (result.warnings.length) {
+      renderDataMessages({ message: summary, warnings: result.warnings });
+    } else {
+      renderDataMessages({ message: summary });
+      closeData();
+      showToast(summary);
+    }
+  } catch (e) {
+    renderDataMessages({ message: '导入失败；当前数据未改变', errors: [{ path: file.name, message: e.message }] });
+  } finally {
+    setDataBusy(false);
+  }
+}
+async function applyImportedData(data, meta) {
+  importedView = { data, meta };
+  persistImported();
+  versionData.set(IMPORTED_VER, data);
+  await ensureV1();
+  currentVer = IMPORTED_VER;
+  loadedVer = IMPORTED_VER;
+  applyPointsData(data, { keepView: true });
+}
+function persistImported() {
+  if (!importedView) return;
+  try {
+    const payload = JSON.stringify({
+      schema: DATA_CACHE_SCHEMA,
+      importedAt: importedView.meta.importedAt,
+      fileName: importedView.meta.fileName,
+      source: importedView.meta.source,
+      data: importedView.data,
+    });
+    if (payload.length > 2.4 * 1024 * 1024) throw new Error('数据超过 localStorage 容量');
+    localStorage.setItem(DATA_CACHE_KEY, payload);
+    try { localStorage.removeItem(LEGACY_DATA_CACHE_KEY); } catch (_) {}
+  } catch (e) {
+    showToast('浏览器暂存失败，仅本次会话有效');
+  }
+}
+function loadCachedImport() {
+  let key = DATA_CACHE_KEY;
+  try {
+    let raw = localStorage.getItem(DATA_CACHE_KEY);
+    if (!raw) { key = LEGACY_DATA_CACHE_KEY; raw = localStorage.getItem(LEGACY_DATA_CACHE_KEY); }
+    if (!raw) return;
+    const cache = JSON.parse(raw);
+    if (!cache || cache.schema !== DATA_CACHE_SCHEMA || !cache.data) throw new Error('缓存格式不匹配');
+    if (!IO) throw new Error('PointsIO 未加载');
+    const v = IO.validate(cache.data);
+    if (v.errors.length) throw new Error('缓存数据无效');
+    importedView = {
+      data: cache.data,
+      meta: { importedAt: cache.importedAt, fileName: cache.fileName, source: cache.source },
+    };
+    versionData.set(IMPORTED_VER, cache.data);
+    if (key === LEGACY_DATA_CACHE_KEY) {
+      try {
+        localStorage.setItem(DATA_CACHE_KEY, raw);
+        localStorage.removeItem(LEGACY_DATA_CACHE_KEY);
+      } catch (_) {}
+    }
+  } catch (e) {
+    importedView = null;
+    try { localStorage.removeItem(key); } catch (_) {}
+  }
+}
+async function reloadDiskV2() {
+  if (dataBusy) return;
+  setDataBusy(true);
+  try {
+    const ok = await loadVersion('v2', { keepView: true, disk: true });
+    if (ok) showToast('已读取磁盘 v2');
+  } finally {
+    setDataBusy(false);
+  }
+}
+async function deleteImportedView() {
+  if (dataBusy || !importedView) return;
+  const m = importedView.meta || {};
+  const label = m.fileName ? `「${m.fileName}」` : '';
+  if (!window.confirm(`删除导入视图${label}？只删除浏览器暂存，不影响 v1/v2 文件。`)) return;
+  setDataBusy(true);
+  try {
+    if (currentVer === IMPORTED_VER) {
+      const ok = await loadVersion('v2', { keepView: true });
+      if (!ok) {
+        renderDataMessages({ message: '删除失败：无法读取磁盘 v2，导入视图已保留' });
+        return;
+      }
+    }
+    importedView = null;
+    versionData.delete(IMPORTED_VER);
+    try {
+      localStorage.removeItem(DATA_CACHE_KEY);
+      localStorage.removeItem(LEGACY_DATA_CACHE_KEY);
+    } catch (_) {}
+    updateVerButtons();
+    updateDataUI();
+    updateSub();
+    renderDataMessages({ message: '导入视图已删除' });
+    showToast('导入视图已删除');
+  } finally {
+    setDataBusy(false);
+  }
+}
+
+// ---------- 移动端底部面板 ----------
+function openSheet() {
+  sheet.classList.add('open');
+  sheetBar.setAttribute('aria-expanded', 'true');
+}
+function closeSheet() {
+  sheet.classList.remove('open');
+  sheetBar.setAttribute('aria-expanded', 'false');
+}
+function syncSheet() {
+  let title = '分区概览', meta = `${units.length} 单元 · 8 区`;
+  if (selectedUnit) {
+    title = selectedUnit.label;
+    meta = `${selectedUnit.area} · ${selectedUnit.side} #${String(selectedUnit.slot || 0).padStart(2, '0')}`;
+  } else if (selectedArea) {
+    title = `${selectedArea} · ${AREAS[selectedArea].dir}`;
+    meta = areaTheme(selectedArea);
+  }
+  sheetTitle.textContent = title;
+  sheetMeta.textContent = meta;
+  if (!phoneMQ.matches) return;
+  if (!selectedArea && !selectedUnit) { closeSheet(); return; }
+  if (selectedUnit) openSheet();
+}
+sheetBar.addEventListener('click', () => {
+  if (sheet.classList.contains('open')) closeSheet(); else openSheet();
+});
+sheetBar.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sheetBar.click(); }
+});
+if (phoneMQ.addEventListener) phoneMQ.addEventListener('change', () => { if (!phoneMQ.matches) closeSheet(); });
+
+// ---------- 画布 ----------
+const FULL = {x:0, y:0, w:W, h:H};
+const MAX_ZOOM = 20;
+let vb = {...FULL};
+const zlevel = document.getElementById('zlevel');
+const zin = document.getElementById('zin');
+const zout = document.getElementById('zout');
+svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+function applyVB() {
+  svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  zlevel.textContent = Math.round(FULL.w / vb.w * 100) + '%';
+  zin.disabled = vb.w <= FULL.w / MAX_ZOOM + .001;
+  zout.disabled = vb.w >= FULL.w - .001;
+}
+function clampVB(x, y, w) {
+  w = Math.min(FULL.w, Math.max(FULL.w / MAX_ZOOM, w));
+  const h = w * FULL.h / FULL.w;
+  x = Math.min(FULL.w - w, Math.max(0, x));
+  y = Math.min(FULL.h - h, Math.max(0, y));
+  return {x, y, w, h};
+}
+function zoomAt(cx, cy, factor) {
+  const nw = Math.min(FULL.w, Math.max(FULL.w / MAX_ZOOM, vb.w / factor));
+  const k = nw / vb.w;
+  vb = clampVB(cx - (cx - vb.x) * k, cy - (cy - vb.y) * k, nw);
+  applyVB();
+}
+function zoomCenter(factor) {
+  zoomAt(vb.x + vb.w / 2, vb.y + vb.h / 2, factor);
+}
+function screenOf(x, y) {
+  const p = svg.createSVGPoint();
+  p.x = x; p.y = y;
+  return p.matrixTransform(svg.getScreenCTM());
+}
+function svgScale() {
+  const m = svg.getScreenCTM();
+  return Math.hypot(m.a, m.b) || 1;
+}
+function focusArea(a) {
+  const as = areaSlots[a];
+  const x0 = Math.min(...as.map(s => s.bx)), x1 = Math.max(...as.map(s => s.bx));
+  const z0 = Math.min(...as.map(s => s.bz)), z1 = Math.max(...as.map(s => s.bz));
+  const cx = px((x0 + x1 + 1) / 2), cy = py((z0 + z1 + 1) / 2);
+  const span = Math.max((x1 - x0 + 8) * S, (z1 - z0 + 8) * S);
+  const w = Math.min(FULL.w, Math.max(FULL.w / MAX_ZOOM, span * 1.7));
+  const h = w * FULL.h / FULL.w;
+  let vy = cy - h / 2;
+  if (phoneMQ.matches && sheet.classList.contains('open')) {
+    const cover = Math.min(window.innerHeight * (SHORT_MQ.matches ? .62 : .58), side.scrollHeight + 60);
+    const rect = svg.getBoundingClientRect();
+    vy += Math.max(0, cover - Math.max(0, window.innerHeight - rect.bottom)) / 2 / svgScale();
+  }
+  vb = clampVB(cx - w / 2, vy, w);
+  applyVB();
+}
+function revealSlot(slot) {
+  if (!phoneMQ.matches || !slot) return;
+  const rect = svg.getBoundingClientRect();
+  if (!rect.height) return;
+  const cover = Math.min(window.innerHeight * (SHORT_MQ.matches ? .62 : .58), side.scrollHeight + 60);
+  const sheetTop = window.innerHeight - cover;
+  const visibleH = sheetTop - rect.top;
+  if (visibleH < 120) return;
+  const sp = screenOf(px(slot.bx) + S / 2, py(slot.bz) + S / 2);
+  if (sp.y < sheetTop - 36) return;
+  const dy = (sp.y - (rect.top + visibleH / 2)) / svgScale();
+  vb = clampVB(vb.x, vb.y + dy, vb.w);
+  applyVB();
+}
+function defaultVB() {
+  if (!phoneMQ.matches) return {...FULL};
+  const sw = svg.clientWidth || 0, sh = svg.clientHeight || 0;
+  // 首屏尽量容纳 A–H 区名（约 31–997 用户单位）；屏幕越扁，自动缩到更宽
+  const need = sh ? 984 * sw / sh : FULL.w;
+  const w = Math.min(FULL.w, Math.max(FULL.w / 1.5, need));
+  const h = w * FULL.h / FULL.w;
+  return clampVB((FULL.w - w) / 2, (FULL.h - h) / 2, w);
+}
+function resetZoom() { vb = defaultVB(); applyVB(); }
+function toUser(clientX, clientY) {
+  const p = svg.createSVGPoint(); p.x = clientX; p.y = clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+zin.addEventListener('click', () => zoomCenter(1.4));
+zout.addEventListener('click', () => zoomCenter(1 / 1.4));
+document.getElementById('zreset').addEventListener('click', resetZoom);
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const p = toUser(e.clientX, e.clientY);
+  zoomAt(p.x, p.y, e.deltaY < 0 ? 1.18 : 1 / 1.18);
+}, {passive:false});
+// ---------- 手势：鼠标拖动 / 触屏平移 · 双指缩放 · 双击放大 ----------
+const pointers = new Map();
+let gesture = null;
+let lastPanAt = 0;
+let lastTap = null;
+const PAN_SLOP = 6;
+
+function ctmScale() {
+  const m = svg.getScreenCTM();
+  return {x: Math.abs(m.a) || 1, y: Math.abs(m.d) || 1};
+}
+function panByPixels(dx, dy) {
+  const s = ctmScale();
+  vb = clampVB(vb.x - dx / s.x, vb.y - dy / s.y, vb.w);
+  applyVB();
+}
+function tapSuppressed() { return performance.now() - lastPanAt < 320; }
+function hideTouchHint() {
+  const h = document.getElementById('touchHint');
+  if (h) h.classList.add('off');
+}
+function pinchMetrics() {
+  const [a, b] = [...pointers.values()];
+  return {
+    dist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+    midX: (a.x + b.x) / 2, midY: (a.y + b.y) / 2,
+  };
+}
+
+svg.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  hideTip(); hideTouchHint();
+  pointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+  if (pointers.size === 1) {
+    gesture = {type:'drag', startX:e.clientX, startY:e.clientY, lastX:e.clientX, lastY:e.clientY, moved:false};
+    svg.classList.add('dragging');
+  } else if (pointers.size === 2) {
+    for (const id of pointers.keys()) { try { svg.setPointerCapture(id); } catch (_) {} }
+    gesture = {type:'pinch', ...pinchMetrics(), moved:true};
+    lastTap = null;
+  }
+});
+
+svg.addEventListener('pointermove', e => {
+  if (!pointers.has(e.pointerId) || !gesture) return;
+  pointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+  if (gesture.type === 'drag' && pointers.size === 1) {
+    if (!gesture.moved && Math.hypot(e.clientX - gesture.startX, e.clientY - gesture.startY) > PAN_SLOP) {
+      gesture.moved = true;
+      try { svg.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    const dx = e.clientX - gesture.lastX, dy = e.clientY - gesture.lastY;
+    gesture.lastX = e.clientX; gesture.lastY = e.clientY;
+    if (gesture.moved) panByPixels(dx, dy);
+  } else if (gesture.type === 'pinch' && pointers.size >= 2) {
+    const m = pinchMetrics();
+    if (m.midX !== gesture.midX || m.midY !== gesture.midY) panByPixels(m.midX - gesture.midX, m.midY - gesture.midY);
+    const f = m.dist / gesture.dist;
+    if (Math.abs(f - 1) > .002) {
+      const p = toUser(m.midX, m.midY);
+      zoomAt(p.x, p.y, f);
+    }
+    gesture.dist = m.dist; gesture.midX = m.midX; gesture.midY = m.midY;
+  }
+});
+
+function endPointer(e) {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.delete(e.pointerId);
+  try { svg.releasePointerCapture(e.pointerId); } catch (_) {}
+  if (pointers.size > 0) {
+    if (pointers.size === 1) {
+      const p = [...pointers.values()][0];
+      gesture = {type:'drag', startX:p.x, startY:p.y, lastX:p.x, lastY:p.y, moved:true};
+    }
+    return;
+  }
+  if (gesture) {
+    if (gesture.moved) { lastPanAt = performance.now(); lastTap = null; }
+    else if (e.pointerType === 'touch' && gesture.type === 'drag') {
+      const now = performance.now();
+      if (lastTap && now - lastTap.t < 320 && Math.hypot(gesture.startX - lastTap.x, gesture.startY - lastTap.y) < 32) {
+        const p = toUser(gesture.startX, gesture.startY);
+        if (vb.w < FULL.w * .55) resetZoom(); else zoomAt(p.x, p.y, 2.1);
+        lastPanAt = performance.now();
+        lastTap = null;
+      } else {
+        lastTap = {t: now, x: gesture.startX, y: gesture.startY};
+      }
+    }
+  }
+  gesture = null;
+  svg.classList.remove('dragging');
+}
+window.addEventListener('pointerup', endPointer);
+window.addEventListener('pointercancel', endPointer);
+window.addEventListener('keydown', e => {
+  if (dataOverlay.classList.contains('on')) return;
+  if (e.key === '+' || e.key === '=') zoomCenter(1.5);
+  else if (e.key === '-') zoomCenter(1 / 1.5);
+  else if (e.key === '0') resetZoom();
+});
+
+let gBBox, gSlots, gTex, gNames, gBadges, gStation, gLabels;
+let labelRefs = {};
+let selRing = null;
+
+function createGroups() {
+  gBBox = add('g', {});
+  gSlots = add('g', {});
+  gTex = add('g', {});
+  gNames = add('g', {});
+  gBadges = add('g', {});
+  gStation = add('g', {style:'display:none'});
+  gLabels = add('g', {});
+  labelRefs = {};
+  selRing = null;
+}
+
+function draw() {
+  svg.textContent = '';
+  add('rect', {x:0, y:0, width:W, height:H, fill:'#fdfcf9'});
+  const gGrid = add('g', {opacity:.75});
+  for (let x = 5150; x <= 5310; x += 10) {
+    add('line', {x1:px(x), y1:py(MINZ - 2), x2:px(x), y2:py(MAXZ + 3), stroke:'#f1ede4', 'stroke-width':.6}, gGrid);
+  }
+  for (let z = -37790; z <= -37630; z += 10) {
+    add('line', {x1:px(MINX - 2), y1:py(z), x2:px(MAXX + 3), y2:py(z), stroke:'#f1ede4', 'stroke-width':.6}, gGrid);
+  }
+  createGroups();
+  for (const a of 'ABCDEFGH') {
+    const xs = areaSlots[a].map(s => s.bx), zs = areaSlots[a].map(s => s.bz);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
+    add('rect', {x:px(x0) - 1.5, y:py(z0) - 1.5, width:(x1 - x0 + 1) * S + 3, height:(z1 - z0 + 1) * S + 3, rx:4, fill:AREAS[a].color, 'fill-opacity':.055, stroke:AREAS[a].color, 'stroke-opacity':.18, 'stroke-width':.8}, gBBox);
+  }
+  const cx = px(5231.5), cy = py(-37712.5);
+  add('circle', {cx, cy, r:3, fill:'#c9c1b2'});
+  add('line', {x1:cx - 9, y1:cy, x2:cx + 9, y2:cy, stroke:'#c9c1b2', 'stroke-width':.8});
+  add('line', {x1:cx, y1:cy - 9, x2:cx, y2:cy + 9, stroke:'#c9c1b2', 'stroke-width':.8});
+  const ct = add('text', {x:cx, y:cy + 19, 'text-anchor':'middle', 'font-size':9, fill:'#a9a294'});
+  ct.textContent = '中心';
+
+  for (const s of slots) {
+    const u = unitBySlot.get(`${s.a}-${s.s}-${s.i}`);
+    const air = !u;
+    const fill = air ? '#e9e4d9' : (u.type === 'enchant' ? '#b07a2a' : u.type === 'potion' ? '#7a4bb0' : AREAS[s.a].color);
+    const r = add('rect', {x:px(s.bx) + .05, y:py(s.bz) + .05, width:S - .1, height:S - .1, rx:.6, fill, 'fill-opacity':air ? .55 : .92, class:'slot'}, gSlots);
+    r.dataset.a = s.a; r.dataset.s = s.s; r.dataset.i = s.i;
+    s.el = r;
+    if (u) {
+      u.el = r;
+      r.addEventListener('mouseenter', e => showTip(e, u));
+      r.addEventListener('mousemove', moveTip);
+      r.addEventListener('mouseleave', hideTip);
+      r.addEventListener('click', e => { e.stopPropagation(); if (tapSuppressed()) return; selectUnit(u); });
+      const href = texFor(u);
+      if (href) {
+        const im = add('image', {x:px(s.bx) + S * .08, y:py(s.bz) + S * .08, width:S * .84, height:S * .84, href, preserveAspectRatio:'xMidYMid meet', class:'tex'}, gTex);
+        im.style.imageRendering = 'pixelated';
+        im.addEventListener('error', () => { im.style.display = 'none'; });
+        u.texEl = im;
+      }
+      if (!href) {
+        const raw = String(ITEM_CN[u.items[0]] || u.items[0] || u.label || '').trim();
+        const chars = Array.from(raw).slice(0, 4);
+        const labels = [chars.slice(0, 2).join(''), chars.slice(2, 4).join('')].filter(Boolean);
+        const fsz = S * .28, step = S * .34;
+        const start = py(s.bz) + (S - (labels.length - 1) * step) / 2 + fsz * .35;
+        const g = add('g', {class:'nametext'}, gNames);
+        labels.forEach((label, i) => {
+          const t = add('text', {
+            x: px(s.bx) + S / 2, y: start + i * step, 'text-anchor':'middle', 'font-size':fsz,
+            fill:'#2b2b2b', stroke:'#fff', 'stroke-width':S * .045, 'paint-order':'stroke',
+            'stroke-linejoin':'round',
+          }, g);
+          t.textContent = label;
+        });
+        u.nameEl = g;
+      }
+      if (isMerged(u)) {
+        const x = px(s.bx), y = py(s.bz);
+        u.badgeEl = add('path', {
+          d: `M${x + S - .45} ${y + S - 2.45} L${x + S - .45} ${y + S - .45} L${x + S - 2.45} ${y + S - .45} Z`,
+          fill: '#fff', 'fill-opacity': .95, stroke: '#111', 'stroke-opacity': .55, 'stroke-width': .25,
+          class: 'badge',
+        }, gBadges);
+      }
+    } else {
+      r.addEventListener('click', e => { e.stopPropagation(); if (tapSuppressed()) return; selectArea(s.a); });
+    }
+  }
+
+  const LP = {
+    A:[5231.5, -37805], B:[5291, -37758], C:[5291, -37726], D:[5291, -37694],
+    E:[5231.5, -37619], F:[5172, -37694], G:[5172, -37726], H:[5172, -37758]
+  };
+  for (const a of 'ABCDEFGH') {
+    const [lx, lz] = LP[a];
+    const g = add('g', {class:'alabel'}, gLabels);
+    const l1 = add('text', {x:px(lx), y:py(lz), 'text-anchor':'middle', 'font-size':13, 'font-weight':700}, g);
+    const l2 = add('text', {x:px(lx), y:py(lz) + 15, 'text-anchor':'middle', 'font-size':10.5, fill:'#5f5a52'}, g);
+    const l3 = add('text', {x:px(lx), y:py(lz) + 27, 'text-anchor':'middle', 'font-size':9.5, fill:'#9a9488'}, g);
+    l1.setAttribute('fill', AREAS[a].color);
+    l1.textContent = `${a} · ${AREAS[a].dir}`;
+    l2.textContent = areaTheme(a);
+    const un = units.filter(u => u.area === a).length;
+    l3.textContent = `${un} 单元 / 110 格`;
+    g.addEventListener('click', e => { e.stopPropagation(); if (tapSuppressed()) return; selectArea(a); });
+    g.addEventListener('mouseenter', () => { if (!selectedArea) highlightArea(a, true); });
+    g.addEventListener('mouseleave', () => { if (!selectedArea) highlightArea(null, false); });
+    labelRefs[a] = {g, l1, l2, l3};
+  }
+
+  const comp = add('g', {transform:'translate(24,42)'});
+  add('path', {d:'M0 17 L0 0 M-4.5 5.8 L0 0 L4.5 5.8', fill:'none', stroke:'#8b857a', 'stroke-width':1.2, 'stroke-linecap':'round', 'stroke-linejoin':'round'}, comp);
+  const nt = add('text', {x:0, y:-8, 'text-anchor':'middle', 'font-size':10, 'font-weight':700, fill:'#8b857a'}, comp);
+  nt.textContent = '北';
+  selRing = add('circle', {r:S * 1.55, fill:'none', stroke:'#111', 'stroke-width':1.3, 'pointer-events':'none', display:'none'});
+  drawStation();
+}
+
+function drawStation() {
+  for (const u of units) {
+    const x = px(u.p.x), y = py(u.p.z);
+    const g = add('g', {}, gStation);
+    add('circle', {cx:x, cy:y, r:1.1, fill:'#111', 'fill-opacity':.55}, g);
+    const rad = (Number(u.p.yaw) || 0) * Math.PI / 180;
+    add('line', {x1:x, y1:y, x2:x + Math.sin(rad) * 3.2, y2:y - Math.cos(rad) * 3.2, stroke:'#111', 'stroke-opacity':.45, 'stroke-width':.7}, g);
+  }
+  const names = {collector:'接收点', trash:'垃圾点', minecart:'矿车点', ready:'准备点'};
+  for (const [k, cn] of Object.entries(names)) {
+    const p = specialPoints[k];
+    if (!p) continue;
+    const x = px(p.x), y = py(p.z);
+    const g = add('g', {}, gStation);
+    add('rect', {x:x - 2, y:y - 2, width:4, height:4, fill:'#111', 'fill-opacity':.6, transform:`rotate(45 ${x} ${y})`}, g);
+    add('text', {x:x + 4, y:y - 3, 'font-size':8.5, fill:'#6b7280'}, g).textContent = cn;
+  }
+}
+
+function paint() {
+  for (const s of slots) {
+    const u = unitBySlot.get(`${s.a}-${s.s}-${s.i}`);
+    const dim = !!selectedArea && s.a !== selectedArea;
+    s.el.classList.toggle('dim', dim);
+    s.el.classList.toggle('sel', !!selectedUnit && selectedUnit.slotRef === s);
+    if (u && u.texEl) u.texEl.classList.toggle('dim', dim);
+    if (u && u.nameEl) u.nameEl.classList.toggle('dim', dim);
+    if (u && u.badgeEl) u.badgeEl.classList.toggle('dim', dim);
+    s.el.style.display = (!u && hideEmpty) ? 'none' : '';
+    if (u && u.texEl) u.texEl.style.display = (!showTextures || (!u && hideEmpty)) ? 'none' : '';
+  }
+  for (const a of 'ABCDEFGH') if (labelRefs[a]) labelRefs[a].g.classList.toggle('dim', !!selectedArea && selectedArea !== a);
+  gStation.style.display = showPoints ? '' : 'none';
+  if (selRing) {
+    if (selectedSlot) {
+      selRing.setAttribute('cx', px(selectedSlot.bx) + S / 2);
+      selRing.setAttribute('cy', py(selectedSlot.bz) + S / 2);
+      selRing.style.display = '';
+    } else selRing.style.display = 'none';
+  }
+}
+
+function highlightArea(a, on) {
+  for (const s of slots) {
+    if (on && s.a !== a) s.el.classList.add('dim');
+    else if (!on) s.el.classList.remove('dim');
+  }
+}
+
+function showTip(e, u) {
+  if (!CAN_HOVER) return;
+  const tag = u.type === 'enchant' ? '附魔书' : u.type === 'potion' ? '药水' : '物品';
+  const merged = isMerged(u) ? `合并编组 ${u.items.length} 项 · ` : '';
+  tip.innerHTML = `<div class="t1">${u.area} · ${u.side} #${String(u.slot || 0).padStart(2, '0')} · ${u.label}</div>
+    <div class="t2">${tag} · ${merged}${u.count} 件</div>
+    <div class="t3">${(() => { const ic = iconItem(u); if (ic) return '图标：' + (ITEM_CN[ic] || ic); const raw = String(ITEM_CN[u.items[0]] || u.items[0] || u.label || '').trim(); return '名称展示：' + Array.from(raw).slice(0, 4).join(''); })()}</div>
+    <div class="t3">${u.items.slice(0, 8).map(i => ITEM_CN[i] || i).join(' / ')}${u.items.length > 8 ? ' …' : ''}</div>
+    <div class="t3">点位 (${u.p.x.toFixed(2)}, ${u.p.y}, ${u.p.z.toFixed(2)}) · yaw ${u.p.yaw}</div>`;
+  tip.style.opacity = 1;
+  moveTip(e);
+}
+function moveTip(e) {
+  const pad = 14;
+  let x = e.clientX + pad, y = e.clientY + pad;
+  const r = tip.getBoundingClientRect();
+  if (x + r.width > window.innerWidth - 8) x = e.clientX - r.width - pad;
+  if (y + r.height > window.innerHeight - 8) y = e.clientY - r.height - pad;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+function hideTip() { tip.style.opacity = 0; }
+
+function selectArea(a) {
+  selectedArea = a; selectedUnit = null; selectedSlot = null;
+  focusArea(a);
+  paint(); renderSide();
+}
+function selectUnit(u) {
+  selectedUnit = u; selectedArea = u.area || null; selectedSlot = u.slotRef;
+  paint(); renderSide();
+  revealSlot(u.slotRef);
+}
+function resetSel() {
+  selectedArea = null; selectedUnit = null; selectedSlot = null;
+  paint(); renderSide();
+}
+document.getElementById('reset').addEventListener('click', () => { resetSel(); resetZoom(); });
+svg.addEventListener('click', () => { if (!tapSuppressed()) resetSel(); });
+document.getElementById('showTex').addEventListener('change', e => { showTextures = e.target.checked; paint(); });
+document.getElementById('hideEmpty').addEventListener('change', e => { hideEmpty = e.target.checked; paint(); });
+document.getElementById('showPoints').addEventListener('change', e => { showPoints = e.target.checked; paint(); });
+searchBtn.addEventListener('click', openSearch);
+document.getElementById('searchClose').addEventListener('click', closeSearch);
+searchOverlay.addEventListener('click', e => { if (e.target === searchOverlay) closeSearch(); });
+searchInput.addEventListener('input', e => renderSearch(e.target.value));
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { e.preventDefault(); closeSearch(); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); setSearchActive(searchActive + 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); setSearchActive(searchActive - 1); }
+  else if (e.key === 'Enter') { e.preventDefault(); chooseSearch(searchActive >= 0 ? searchActive : 0); }
+});
+searchResults.addEventListener('click', e => {
+  const row = e.target.closest('.srow');
+  if (row) chooseSearch(Number(row.dataset.idx));
+});
+dataBtn.addEventListener('click', openData);
+dataClose.addEventListener('click', closeData);
+dataOverlay.addEventListener('click', e => { if (e.target === dataOverlay) closeData(); });
+exportXlsxBtn.addEventListener('click', exportExcel);
+exportJsonBtn.addEventListener('click', exportJson);
+importBtn.addEventListener('click', triggerImport);
+importFile.addEventListener('change', e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  handleImportFile(f);
+});
+restoreDiskBtn.addEventListener('click', reloadDiskV2);
+deleteImportedBtn.addEventListener('click', deleteImportedView);
+dataCopy.addEventListener('click', copyDataMessages);
+window.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (dataOverlay.classList.contains('on')) closeData();
+  else if (searchOverlay.classList.contains('on')) closeSearch();
+  else closeSheet();
+});
+
+// ---------- 侧栏 ----------
+function renderSide() {
+  side.scrollTop = 0;
+  if (selectedUnit) renderUnit();
+  else if (selectedArea) renderArea(selectedArea);
+  else renderOverview();
+  syncSheet();
+}
+function versionCardHTML() {
+  const head = '<h3>版本</h3>';
+  const viewName = VER_NAMES[currentVer] || currentVer;
+  if (currentVer === 'v1') {
+    return `${head}<div class="special">
+      <div><b>当前视图</b> ${VER_NAMES.v1}（基准，只读对比）</div>
+      <div><b>其他视图</b> v2 工作版本${importedView ? '、导入视图' : ''}，顶部切换</div>
+    </div>`;
+  }
+  if (!versionData.has('v1')) {
+    return `${head}<div class="special">
+      <div><b>当前视图</b> ${viewName}</div>
+      <div><b>对比 v1</b> 未加载 ${VER_FILES.v1}</div>
+    </div>`;
+  }
+  const d = versionDiff || {moved: [], added: [], removed: []};
+  const n = d.moved.length + d.added.length + d.removed.length;
+  const rows = [
+    ...d.moved.map(m => `<div class="vrow"><span class="v1">${m.u.label}</span><span class="v2">${unitSlotText(m.b)} → ${unitSlotText(m.u)}</span></div>`),
+    ...d.added.map(u => `<div class="vrow"><span class="v1">${u.label}</span><span class="v2">新增 · ${unitSlotText(u)}</span></div>`),
+    ...d.removed.map(u => `<div class="vrow"><span class="v1">${u.label}</span><span class="v2">移除 · v1 ${unitSlotText(u)}</span></div>`),
+  ];
+  return `${head}
+    <div class="special">
+      <div><b>当前视图</b> ${viewName}</div>
+      <div><b>对比 v1</b> ${n ? `移动 ${d.moved.length} · 新增 ${d.added.length} · 移除 ${d.removed.length}` : '无差异'}</div>
+    </div>
+    ${rows.length ? `<details class="vdiff"><summary>差异清单（${rows.length}）</summary><div class="vlist">${rows.join('')}</div></details>` : ''}`;
+}
+function v1MoveHTML(u) {
+  if (currentVer === 'v1' || !versionData.has('v1')) return '';
+  const b = v1ByLabel.get(u.label);
+  if (!b) return '<div><b>v1 位置</b> 无（新增单元）</div>';
+  if (b.area === u.area && b.side === u.side && b.slot === u.slot) return '';
+  return `<div><b>v1 位置</b> ${unitSlotText(b)}</div>`;
+}
+function renderOverview() {
+  const occupied = units.filter(u => u.slot).length;
+  const totalItems = units.reduce((n, u) => n + u.count, 0);
+  const counts = {};
+  for (const u of units) counts[u.area] = (counts[u.area] || 0) + 1;
+  side.innerHTML = `<h2>分区概览</h2>
+    <div class="meta">8 区 × 2 侧 × 55 格 = 880 格</div>
+    <div class="kpis">
+      <div class="kpi"><b>${units.length}</b><span>存储单元</span></div>
+      <div class="kpi"><b>${totalItems}</b><span>匹配规则</span></div>
+      <div class="kpi"><b>${occupied}</b><span>占用货位</span></div>
+    </div>
+    ${versionCardHTML()}
+    <div class="legend">${'ABCDEFGH'.split('').map(a => `
+      <div class="lrow" data-area="${a}">
+        <span class="sw" style="background:${AREAS[a].color}"></span>
+        <span class="lname"><b>${a} · ${AREAS[a].dir}</b><small>${areaTheme(a)}</small></span>
+        <span class="lnum">${counts[a] || 0} 单元</span>
+      </div>`).join('')}</div>
+    <h3>特殊点位</h3>
+    <div class="special">
+      ${specialPoints.home ? `<div><b>家</b> ${fmtP(specialPoints.home)}</div>` : ''}
+      <div><b>接收点</b> ${fmtP(specialPoints.collector)}</div>
+      <div><b>垃圾点</b> ${fmtP(specialPoints.trash)}</div>
+      <div><b>矿车点</b> ${fmtP(specialPoints.minecart)}</div>
+      <div><b>准备点</b> ${fmtP(specialPoints.ready)}</div>
+      <div><b>领取按钮</b> ${fmtB(specialPoints.button)}</div>
+      <div><b>准备按钮</b> ${fmtB(specialPoints.readyButton)}</div>
+    </div>
+    <div class="note">右下角白色角标 = 合并编组单元（多物品共用一个点位）；顶部可切换 v1 冻结快照与 v2 当前版本，差异按单元名对比，空位保留给后续扩展。</div>`;
+  side.querySelectorAll('.lrow').forEach(el => el.addEventListener('click', () => selectArea(el.dataset.area)));
+  side.querySelectorAll('.lrow').forEach(el => el.addEventListener('mouseenter', () => { if (!selectedArea) highlightArea(el.dataset.area, true); }));
+  side.querySelectorAll('.lrow').forEach(el => el.addEventListener('mouseleave', () => { if (!selectedArea) highlightArea(null, false); }));
+}
+function fmtP(p) {
+  if (!p) return '—';
+  return `(${Number(p.x).toFixed(2)}, ${p.y}, ${Number(p.z).toFixed(2)}) yaw ${p.yaw ?? '—'}`;
+}
+function fmtB(p) {
+  if (!p) return '—';
+  return `(${p.x}, ${p.y}, ${p.z})`;
+}
+function renderArea(a) {
+  const us = units.filter(u => u.area === a);
+  const groups = {};
+  for (const u of us) {
+    const k = u.side + ' · ' + (u.type === 'enchant' ? '附魔书' : u.type === 'potion' ? '药水' : '物品');
+    (groups[k] = groups[k] || []).push(u);
+  }
+  const order = Object.keys(groups).sort((x, y) => {
+    const xs = x.split(' · ')[0], ys = y.split(' · ')[0];
+    if (xs !== ys) return xs.localeCompare(ys);
+    const xm = Math.min(...groups[x].map(u => u.slot || 99));
+    const ym = Math.min(...groups[y].map(u => u.slot || 99));
+    return xm - ym;
+  });
+  side.innerHTML = `<button class="back" id="backAll">← 全部区</button>
+    <h2>${a} · ${AREAS[a].dir} · ${areaTheme(a)}</h2>
+    <div class="meta">${us.length} 个单元 / 110 格</div>
+    ${order.map(k => `<div class="sidehead">${k}</div><div class="rows">${groups[k].map(u => {
+      const href = texFor(u);
+      return `<div class="row" data-idx="${units.indexOf(u)}">
+        <span class="s">${u.slot ? String(u.slot).padStart(2, '0') : '—'}</span>
+        ${href ? `<img class="i" src="${href}" alt="">` : ''}
+        <span class="n">${u.label}</span><span class="c">${u.count}</span>
+      </div>`;
+    }).join('')}</div>`).join('')}`;
+  side.querySelector('#backAll').addEventListener('click', resetSel);
+  side.querySelectorAll('.row').forEach(el => el.addEventListener('click', () => {
+    const u = units[Number(el.dataset.idx)];
+    if (u) selectUnit(u);
+  }));
+}
+function renderUnit() {
+  const u = selectedUnit;
+  const tag = u.type === 'enchant' ? '附魔书' : u.type === 'potion' ? '药水' : '物品';
+  const back = selectedArea ? `<button class="back" id="backArea">← ${selectedArea} 区</button>` : `<button class="back" id="backAll">← 全部区</button>`;
+  side.innerHTML = `${back}
+    <h2>${u.label}</h2>
+    <div class="meta">${u.area} · ${u.side} 第 ${u.slot ?? '—'} 格 · ${tag}</div>
+    <div class="tagrow"><span class="tag ${u.type}">${tag}</span>${isMerged(u) ? '<span class="tag merged">合并编组</span>' : ''}${!iconItem(u) ? '<span class="tag">名称展示</span>' : ''}<span class="tag">${u.count} 条规则</span><span class="tag">${u.items.length} 种物品</span></div>
+    <div class="special">
+      <div><b>点位</b> (${u.p.x.toFixed(2)}, ${u.p.y}, ${u.p.z.toFixed(2)})</div>
+      <div><b>朝向</b> yaw ${u.p.yaw} / pitch ${u.p.pitch}</div>
+      <div><b>货位</b> ${u.area}-${u.side} #${u.slot ?? '—'}</div>
+      ${v1MoveHTML(u)}
+    </div>
+    <h3>变体 / 规则</h3>
+    <div class="vlist">${u.rules.map(r => `<div class="vrow"><span class="v1">${variantLabel(r.match, u)}</span><span class="v2">${variantSub(r.match, u)}</span></div>`).join('')}</div>`;
+  const ba = side.querySelector('#backArea');
+  if (ba) ba.addEventListener('click', () => selectArea(selectedArea));
+  const ball = side.querySelector('#backAll');
+  if (ball) ball.addEventListener('click', resetSel);
+}
+
+// ---------- 版本 / 加载 ----------
+function setVerBusy(on) {
+  verButtons.forEach(b => { b.disabled = on; });
+  document.body.classList.toggle('verloading', on);
+  updateDataUI();
+}
+function updateVerButtons() {
+  verButtons.forEach(b => {
+    const on = b.dataset.ver === currentVer;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  const impBtn = verButtons.find(b => b.dataset.ver === IMPORTED_VER);
+  if (impBtn) {
+    impBtn.hidden = !importedView;
+    const m = importedView?.meta || {};
+    impBtn.title = importedView
+      ? `导入视图：${m.fileName || '文件'}（${formatStamp(m.importedAt)}）`
+      : '导入视图（浏览器暂存，可删除）';
+  }
+}
+function updateSub() {
+  const tag = currentVer === 'v1' ? 'v1 · 冻结' : currentVer === IMPORTED_VER ? '导入 · 临时' : 'v2 · 当前';
+  const diff = currentVer === 'v1' ? '' : ` · ${diffSummaryText()}`;
+  document.getElementById('sub').textContent =
+    `${tag} · ${units.length} 个存储单元 · ${ruleCount} 条规则${diff} · 880 格（8 区 × 2 侧 × 55）`;
+}
+function showLoadError(ver, e) {
+  const err = document.getElementById('err');
+  err.innerHTML = `无法加载 <b>${VER_FILES[ver] || ver}</b>：${e.message}<br>请在本目录运行 <b>python -m http.server 8000</b>，再访问 <b>http://localhost:8000/partition-2d.html</b>；手机访问请改用 <b>python -m http.server 8000 --bind 0.0.0.0</b>，并用手机打开 <b>http://电脑局域网IP:8000/partition-2d.html</b>。<button id="retry">重试</button>`;
+  err.style.display = '';
+  if (!loadedVer) {
+    document.getElementById('sub').textContent = '点位数据未加载';
+    side.innerHTML = `<h2>加载失败</h2><div class="note">浏览器通过 file:// 打开时不能 fetch 本地 JSON。请用本地 HTTP 服务打开本页；手机访问时手机需与电脑在同一局域网。</div>`;
+  }
+  document.getElementById('retry').addEventListener('click', () => loadVersion(ver, {keepView: loadedVer !== null}));
+}
+async function fetchVersion(ver, opts = {}) {
+  const force = !!opts.force;
+  const disk = !!opts.disk;
+  if (ver === IMPORTED_VER) {
+    if (!importedView) throw new Error('导入视图不存在');
+    versionData.set(IMPORTED_VER, importedView.data);
+    return importedView.data;
+  }
+  if (!force && !disk && versionData.has(ver)) return versionData.get(ver);
+  const res = await fetch(VER_FILES[ver], {cache:'no-store'});
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (!data || !Array.isArray(data.items)) throw new Error('items 不是数组');
+  versionData.set(ver, data);
+  return data;
+}
+async function ensureV1() {
+  if (versionData.has('v1')) return;
+  try { await fetchVersion('v1'); } catch (_) { /* v1 缺失时仅关闭对比 */ }
+}
+function applyPointsData(data, opts = {}) {
+  const prevSel = opts.prevSel !== undefined ? opts.prevSel : (selectedUnit ? selectedUnit.label : null);
+  const prevArea = opts.prevArea !== undefined ? opts.prevArea : selectedArea;
+  const keepView = opts.keepView !== false && loadedVer !== null;
+  specialPoints = {
+    home:data.home, collector:data.collector, trash:data.trash, minecart:data.minecart,
+    button:data.button, ready:data.ready, readyButton:data.readyButton,
+  };
+  buildUnits(data.items);
+  recomputeDiff();
+  searchBtn.disabled = false;
+  dataBtn.disabled = false;
+  updateVerButtons();
+  draw();
+  if (!keepView) vb = defaultVB();
+  applyVB();
+  const keepUnit = prevSel ? units.find(u => u.label === prevSel) : null;
+  if (keepUnit) {
+    selectedUnit = keepUnit;
+    selectedArea = keepUnit.area;
+    selectedSlot = keepUnit.slotRef;
+  } else {
+    selectedUnit = null;
+    selectedArea = prevArea;
+    selectedSlot = null;
+  }
+  paint();
+  renderSide();
+  updateSub();
+  updateDataUI();
+}
+async function loadVersion(ver, opts = {}) {
+  if (loadingVer) return false;
+  loadingVer = ver;
+  setVerBusy(true);
+  document.getElementById('err').style.display = 'none';
+  const prevSel = selectedUnit ? selectedUnit.label : null;
+  const prevArea = selectedArea;
+  const keepView = opts.keepView !== false && loadedVer !== null;
+  try {
+    const data = await fetchVersion(ver, {force: ver === 'v2', disk: !!opts.disk});
+    if (ver === 'v2' || ver === IMPORTED_VER) await ensureV1();
+    currentVer = ver;
+    loadedVer = ver;
+    applyPointsData(data, {prevSel, prevArea, keepView});
+    return true;
+  } catch (e) {
+    if (ver === 'v2' && importedView && !loadedVer) {
+      versionData.set(IMPORTED_VER, importedView.data);
+      currentVer = IMPORTED_VER;
+      loadedVer = IMPORTED_VER;
+      applyPointsData(importedView.data, {keepView: false});
+    }
+    showLoadError(ver, e);
+    return false;
+  } finally {
+    loadingVer = null;
+    setVerBusy(false);
+  }
+}
+verSwitch.addEventListener('click', e => {
+  const b = e.target.closest('button[data-ver]');
+  if (!b || loadingVer) return;
+  const ver = b.dataset.ver;
+  if (ver === IMPORTED_VER && !importedView) return;
+  if (ver === currentVer && loadedVer === ver) return;
+  loadVersion(ver, {keepView: true});
+});
+loadCachedImport();
+loadVersion('v2', {keepView: false});
+</script>
+</body>
+</html>

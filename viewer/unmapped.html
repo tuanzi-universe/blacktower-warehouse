@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>未收录物品报告</title>
+<style>
+:root{--bg:#f1eee7;--panel:#fff;--ink:#1e242b;--muted:#6b7280;--line:#e7e1d6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 ui-sans-serif,system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+header{padding:24px 28px 10px;max-width:1100px;margin:0 auto}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+h1{margin:0;font-size:22px;letter-spacing:.2px}
+.sub{color:var(--muted);font-size:12.5px;margin-top:6px}
+.back{border:1px solid #d8d3c8;background:#fff;border-radius:9px;padding:7px 12px;text-decoration:none;color:#374151;font-size:13px;white-space:nowrap}
+.back:hover{background:#faf8f3}
+main{max-width:1100px;margin:0 auto;padding:0 28px 28px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 14px}
+.kpi{background:var(--panel);border-radius:12px;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.kpi b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11.5px;color:var(--muted)}
+.note{background:#fff;border-radius:12px;padding:12px 14px;font-size:12.5px;color:#5f5a52;line-height:1.7;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.note b{color:#374151}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 10px}
+input{height:38px;border:1px solid #d8d3c8;border-radius:9px;padding:0 12px;font:inherit;background:#fff;outline:none;min-width:260px}
+input:focus{border-color:#9ca3af}
+.chip{border:1px solid #e3ddd1;background:#fff;border-radius:999px;padding:6px 11px;font:inherit;font-size:12px;cursor:pointer;color:#4b5563;display:inline-flex;align-items:center;gap:6px}
+.chip b{font-weight:600;color:#111;font-variant-numeric:tabular-nums}
+.chip.on{background:var(--c);border-color:var(--c);color:#fff}
+.chip.on b{color:#fff}
+.chip:hover{filter:brightness(.97)}
+.list{background:var(--panel);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 30px rgba(0,0,0,.04)}
+.row{display:grid;grid-template-columns:110px minmax(150px,1fr) minmax(220px,1.2fr) minmax(220px,1.4fr);gap:12px;align-items:center;padding:9px 14px;border-bottom:1px solid #f1ece2;font-size:12.5px}
+.row:last-child{border-bottom:0}
+.row:hover{background:#faf8f3}
+.badge{justify-self:start;background:color-mix(in srgb,var(--c) 14%,#fff);color:var(--c);border-radius:999px;padding:3px 9px;font-size:11px;white-space:nowrap}
+.cn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+code{color:#8b857a;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.why{color:#6b7280;font-size:11.5px}
+.empty{padding:44px;text-align:center;color:#8b857a;font-size:13px}
+footer{max-width:1100px;margin:0 auto;padding:0 28px 30px;color:#9a9488;font-size:11.5px;line-height:1.7}
+@media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}.row{grid-template-columns:1fr;gap:3px}.badge{justify-self:start}input{min-width:0;width:100%}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <div>
+      <h1>未收录物品报告</h1>
+      <div class="sub">items.json 1658 项 · 已收录 1546 项 · 未收录 112 项 · 覆盖率 93.2%</div>
+    </div>
+    <a class="back" href="partition-2d.html">← 返回点位图</a>
+  </div>
+</header>
+<main>
+  <div class="kpis">
+    <div class="kpi"><b>1658</b><span>items.json 总条目</span></div>
+    <div class="kpi"><b>1546</b><span>已收录到点位</span></div>
+    <div class="kpi"><b>112</b><span>未收录</span></div>
+    <div class="kpi"><b>93.2%</b><span>条目覆盖率</span></div>
+  </div>
+  <div class="note">
+    <b>结论：</b>当前点位已收录 1546 项；未收录的 112 项中，刷怪笼为按要求移除，其余为生存模式无法正常获取的物品，不是遗漏。<br>
+    这些物品不会命中任何点位规则，机器人遇到时会按未映射物品投入 <b>trash</b>。若服务器通过活动/商店发放，需要另行开单元。<br>
+    <b>说明：</b>本报告按 <code>items.json</code> 与当前 <code>item_map.csv</code> 对比生成；<code>potted_*</code>、<code>*_wall_fan</code>、<code>twisted_vines_plant</code> 不在 items.json，未统计。
+  </div>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="搜索中文名 / 物品 ID…" autocomplete="off">
+    <button class="chip on" data-cat="all" style="--c:#111">全部<b>112</b></button>
+    <button class="chip" data-cat="spawn_egg" style="--c:#b45aa8">刷怪蛋<b>88</b></button><button class="chip" data-cat="command" style="--c:#c94a4a">命令方块<b>4</b></button><button class="chip" data-cat="creative" style="--c:#75808f">创造/结构方块<b>5</b></button><button class="chip" data-cat="unobtainable" style="--c:#8b6f4e">不可获取方块<b>7</b></button><button class="chip" data-cat="trial" style="--c:#c98a1f">试炼/宝库<b>2</b></button><button class="chip" data-cat="test" style="--c:#3f74b8">测试方块<b>2</b></button><button class="chip" data-cat="removed" style="--c:#7c6f64">按要求移除<b>1</b></button><button class="chip" data-cat="special" style="--c:#4f8f5a">特殊物品<b>2</b></button><button class="chip" data-cat="air" style="--c:#9ca3af">空气<b>1</b></button>
+  </div>
+  <div class="list" id="list"><div class="row" data-cat="spawn_egg" data-id="ocelot_spawn_egg" data-cn="豹猫刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">豹猫刷怪蛋</span>
+  <code>ocelot_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="polar_bear_spawn_egg" data-cn="北极熊刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">北极熊刷怪蛋</span>
+  <code>polar_bear_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="bat_spawn_egg" data-cn="蝙蝠刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">蝙蝠刷怪蛋</span>
+  <code>bat_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="strider_spawn_egg" data-cn="炽足兽刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">炽足兽刷怪蛋</span>
+  <code>strider_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="villager_spawn_egg" data-cn="村民刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">村民刷怪蛋</span>
+  <code>villager_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="wither_skeleton_spawn_egg" data-cn="凋灵骷髅刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">凋灵骷髅刷怪蛋</span>
+  <code>wither_skeleton_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="wither_spawn_egg" data-cn="凋灵刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">凋灵刷怪蛋</span>
+  <code>wither_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="cave_spider_spawn_egg" data-cn="洞穴蜘蛛刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">洞穴蜘蛛刷怪蛋</span>
+  <code>cave_spider_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="silverfish_spawn_egg" data-cn="蠹虫刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">蠹虫刷怪蛋</span>
+  <code>silverfish_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="ghast_spawn_egg" data-cn="恶魂刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">恶魂刷怪蛋</span>
+  <code>ghast_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="glow_squid_spawn_egg" data-cn="发光鱿鱼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">发光鱿鱼刷怪蛋</span>
+  <code>glow_squid_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="creaking_spawn_egg" data-cn="嘎枝刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">嘎枝刷怪蛋</span>
+  <code>creaking_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="salmon_spawn_egg" data-cn="鲑鱼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">鲑鱼刷怪蛋</span>
+  <code>salmon_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="turtle_spawn_egg" data-cn="海龟刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">海龟刷怪蛋</span>
+  <code>turtle_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="dolphin_spawn_egg" data-cn="海豚刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">海豚刷怪蛋</span>
+  <code>dolphin_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="pufferfish_spawn_egg" data-cn="河豚刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">河豚刷怪蛋</span>
+  <code>pufferfish_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="fox_spawn_egg" data-cn="狐狸刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">狐狸刷怪蛋</span>
+  <code>fox_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="phantom_spawn_egg" data-cn="幻翼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">幻翼刷怪蛋</span>
+  <code>phantom_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="evoker_spawn_egg" data-cn="唤魔者刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">唤魔者刷怪蛋</span>
+  <code>evoker_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="chicken_spawn_egg" data-cn="鸡刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">鸡刷怪蛋</span>
+  <code>chicken_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="warden_spawn_egg" data-cn="监守者刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">监守者刷怪蛋</span>
+  <code>warden_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="zombie_villager_spawn_egg" data-cn="僵尸村民刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">僵尸村民刷怪蛋</span>
+  <code>zombie_villager_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="zombie_horse_spawn_egg" data-cn="僵尸马刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">僵尸马刷怪蛋</span>
+  <code>zombie_horse_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="zombie_spawn_egg" data-cn="僵尸刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">僵尸刷怪蛋</span>
+  <code>zombie_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="zombie_nautilus_spawn_egg" data-cn="僵尸鹦鹉螺刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">僵尸鹦鹉螺刷怪蛋</span>
+  <code>zombie_nautilus_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="zoglin_spawn_egg" data-cn="僵尸疣猪兽刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">僵尸疣猪兽刷怪蛋</span>
+  <code>zoglin_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="zombified_piglin_spawn_egg" data-cn="僵尸猪灵刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">僵尸猪灵刷怪蛋</span>
+  <code>zombified_piglin_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="parched_spawn_egg" data-cn="焦骸刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">焦骸刷怪蛋</span>
+  <code>parched_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="ravager_spawn_egg" data-cn="劫掠兽刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">劫掠兽刷怪蛋</span>
+  <code>ravager_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="tadpole_spawn_egg" data-cn="蝌蚪刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">蝌蚪刷怪蛋</span>
+  <code>tadpole_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="skeleton_horse_spawn_egg" data-cn="骷髅马刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">骷髅马刷怪蛋</span>
+  <code>skeleton_horse_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="skeleton_spawn_egg" data-cn="骷髅刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">骷髅刷怪蛋</span>
+  <code>skeleton_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="creeper_spawn_egg" data-cn="苦力怕刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">苦力怕刷怪蛋</span>
+  <code>creeper_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="happy_ghast_spawn_egg" data-cn="快乐恶魂刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">快乐恶魂刷怪蛋</span>
+  <code>happy_ghast_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="wolf_spawn_egg" data-cn="狼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">狼刷怪蛋</span>
+  <code>wolf_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="blaze_spawn_egg" data-cn="烈焰人刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">烈焰人刷怪蛋</span>
+  <code>blaze_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="wandering_trader_spawn_egg" data-cn="流浪商人刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">流浪商人刷怪蛋</span>
+  <code>wandering_trader_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="stray_spawn_egg" data-cn="流浪者刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">流浪者刷怪蛋</span>
+  <code>stray_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="sulfur_cube_spawn_egg" data-cn="硫方怪刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">硫方怪刷怪蛋</span>
+  <code>sulfur_cube_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="donkey_spawn_egg" data-cn="驴刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">驴刷怪蛋</span>
+  <code>donkey_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="pillager_spawn_egg" data-cn="掠夺者刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">掠夺者刷怪蛋</span>
+  <code>pillager_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="mule_spawn_egg" data-cn="骡刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">骡刷怪蛋</span>
+  <code>mule_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="camel_husk_spawn_egg" data-cn="骆驼尸壳刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">骆驼尸壳刷怪蛋</span>
+  <code>camel_husk_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="camel_spawn_egg" data-cn="骆驼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">骆驼刷怪蛋</span>
+  <code>camel_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="horse_spawn_egg" data-cn="马刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">马刷怪蛋</span>
+  <code>horse_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="cat_spawn_egg" data-cn="猫刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">猫刷怪蛋</span>
+  <code>cat_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="axolotl_spawn_egg" data-cn="美西螈刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">美西螈刷怪蛋</span>
+  <code>axolotl_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="bee_spawn_egg" data-cn="蜜蜂刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">蜜蜂刷怪蛋</span>
+  <code>bee_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="sheep_spawn_egg" data-cn="绵羊刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">绵羊刷怪蛋</span>
+  <code>sheep_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="ender_dragon_spawn_egg" data-cn="末影龙刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">末影龙刷怪蛋</span>
+  <code>ender_dragon_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="endermite_spawn_egg" data-cn="末影螨刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">末影螨刷怪蛋</span>
+  <code>endermite_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="enderman_spawn_egg" data-cn="末影人刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">末影人刷怪蛋</span>
+  <code>enderman_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="mooshroom_spawn_egg" data-cn="哞菇刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">哞菇刷怪蛋</span>
+  <code>mooshroom_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="vex_spawn_egg" data-cn="恼鬼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">恼鬼刷怪蛋</span>
+  <code>vex_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="drowned_spawn_egg" data-cn="溺尸刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">溺尸刷怪蛋</span>
+  <code>drowned_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="cow_spawn_egg" data-cn="牛刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">牛刷怪蛋</span>
+  <code>cow_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="witch_spawn_egg" data-cn="女巫刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">女巫刷怪蛋</span>
+  <code>witch_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="shulker_spawn_egg" data-cn="潜影贝刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">潜影贝刷怪蛋</span>
+  <code>shulker_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="frog_spawn_egg" data-cn="青蛙刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">青蛙刷怪蛋</span>
+  <code>frog_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="armadillo_spawn_egg" data-cn="犰狳刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">犰狳刷怪蛋</span>
+  <code>armadillo_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="tropical_fish_spawn_egg" data-cn="热带鱼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">热带鱼刷怪蛋</span>
+  <code>tropical_fish_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="goat_spawn_egg" data-cn="山羊刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">山羊刷怪蛋</span>
+  <code>goat_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="husk_spawn_egg" data-cn="尸壳刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">尸壳刷怪蛋</span>
+  <code>husk_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="slime_spawn_egg" data-cn="史莱姆刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">史莱姆刷怪蛋</span>
+  <code>slime_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="guardian_spawn_egg" data-cn="守卫者刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">守卫者刷怪蛋</span>
+  <code>guardian_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="iron_golem_spawn_egg" data-cn="铁傀儡刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">铁傀儡刷怪蛋</span>
+  <code>iron_golem_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="copper_golem_spawn_egg" data-cn="铜傀儡刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">铜傀儡刷怪蛋</span>
+  <code>copper_golem_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="rabbit_spawn_egg" data-cn="兔子刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">兔子刷怪蛋</span>
+  <code>rabbit_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="vindicator_spawn_egg" data-cn="卫道士刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">卫道士刷怪蛋</span>
+  <code>vindicator_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="trader_llama_spawn_egg" data-cn="行商羊驼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">行商羊驼刷怪蛋</span>
+  <code>trader_llama_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="panda_spawn_egg" data-cn="熊猫刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">熊猫刷怪蛋</span>
+  <code>panda_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="sniffer_spawn_egg" data-cn="嗅探兽刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">嗅探兽刷怪蛋</span>
+  <code>sniffer_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="breeze_spawn_egg" data-cn="旋风人刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">旋风人刷怪蛋</span>
+  <code>breeze_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="snow_golem_spawn_egg" data-cn="雪傀儡刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">雪傀儡刷怪蛋</span>
+  <code>snow_golem_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="cod_spawn_egg" data-cn="鳕鱼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">鳕鱼刷怪蛋</span>
+  <code>cod_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="magma_cube_spawn_egg" data-cn="岩浆怪刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">岩浆怪刷怪蛋</span>
+  <code>magma_cube_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="llama_spawn_egg" data-cn="羊驼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">羊驼刷怪蛋</span>
+  <code>llama_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="nautilus_spawn_egg" data-cn="鹦鹉螺刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">鹦鹉螺刷怪蛋</span>
+  <code>nautilus_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="parrot_spawn_egg" data-cn="鹦鹉刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">鹦鹉刷怪蛋</span>
+  <code>parrot_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="hoglin_spawn_egg" data-cn="疣猪兽刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">疣猪兽刷怪蛋</span>
+  <code>hoglin_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="squid_spawn_egg" data-cn="鱿鱼刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">鱿鱼刷怪蛋</span>
+  <code>squid_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="elder_guardian_spawn_egg" data-cn="远古守卫者刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">远古守卫者刷怪蛋</span>
+  <code>elder_guardian_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="allay_spawn_egg" data-cn="悦灵刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">悦灵刷怪蛋</span>
+  <code>allay_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="bogged_spawn_egg" data-cn="沼骸刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">沼骸刷怪蛋</span>
+  <code>bogged_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="spider_spawn_egg" data-cn="蜘蛛刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">蜘蛛刷怪蛋</span>
+  <code>spider_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="piglin_brute_spawn_egg" data-cn="猪灵蛮兵刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">猪灵蛮兵刷怪蛋</span>
+  <code>piglin_brute_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="piglin_spawn_egg" data-cn="猪灵刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">猪灵刷怪蛋</span>
+  <code>piglin_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="spawn_egg" data-id="pig_spawn_egg" data-cn="猪刷怪蛋">
+  <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
+  <span class="cn">猪刷怪蛋</span>
+  <code>pig_spawn_egg</code>
+  <span class="why">生存模式无获取途径（仅创造/命令）</span>
+</div><div class="row" data-cat="command" data-id="chain_command_block" data-cn="连锁型命令方块">
+  <span class="badge" style="--c:#c94a4a">命令方块</span>
+  <span class="cn">连锁型命令方块</span>
+  <code>chain_command_block</code>
+  <span class="why">仅创造模式或命令获取</span>
+</div><div class="row" data-cat="command" data-id="command_block" data-cn="命令方块">
+  <span class="badge" style="--c:#c94a4a">命令方块</span>
+  <span class="cn">命令方块</span>
+  <code>command_block</code>
+  <span class="why">仅创造模式或命令获取</span>
+</div><div class="row" data-cat="command" data-id="command_block_minecart" data-cn="命令方块矿车">
+  <span class="badge" style="--c:#c94a4a">命令方块</span>
+  <span class="cn">命令方块矿车</span>
+  <code>command_block_minecart</code>
+  <span class="why">仅创造模式或命令获取</span>
+</div><div class="row" data-cat="command" data-id="repeating_command_block" data-cn="循环型命令方块">
+  <span class="badge" style="--c:#c94a4a">命令方块</span>
+  <span class="cn">循环型命令方块</span>
+  <code>repeating_command_block</code>
+  <span class="why">仅创造模式或命令获取</span>
+</div><div class="row" data-cat="creative" data-id="light" data-cn="光源方块">
+  <span class="badge" style="--c:#75808f">创造/结构方块</span>
+  <span class="cn">光源方块</span>
+  <code>light</code>
+  <span class="why">创造模式或结构方块专用</span>
+</div><div class="row" data-cat="creative" data-id="structure_block" data-cn="结构方块">
+  <span class="badge" style="--c:#75808f">创造/结构方块</span>
+  <span class="cn">结构方块</span>
+  <code>structure_block</code>
+  <span class="why">创造模式或结构方块专用</span>
+</div><div class="row" data-cat="creative" data-id="structure_void" data-cn="结构空位">
+  <span class="badge" style="--c:#75808f">创造/结构方块</span>
+  <span class="cn">结构空位</span>
+  <code>structure_void</code>
+  <span class="why">创造模式或结构方块专用</span>
+</div><div class="row" data-cat="creative" data-id="jigsaw" data-cn="拼图方块">
+  <span class="badge" style="--c:#75808f">创造/结构方块</span>
+  <span class="cn">拼图方块</span>
+  <code>jigsaw</code>
+  <span class="why">创造模式或结构方块专用</span>
+</div><div class="row" data-cat="creative" data-id="barrier" data-cn="屏障">
+  <span class="badge" style="--c:#75808f">创造/结构方块</span>
+  <span class="cn">屏障</span>
+  <code>barrier</code>
+  <span class="why">创造模式或结构方块专用</span>
+</div><div class="row" data-cat="unobtainable" data-id="farmland" data-cn="耕地">
+  <span class="badge" style="--c:#8b6f4e">不可获取方块</span>
+  <span class="cn">耕地</span>
+  <code>farmland</code>
+  <span class="why">生存模式无法正常获取</span>
+</div><div class="row" data-cat="unobtainable" data-id="bedrock" data-cn="基岩">
+  <span class="badge" style="--c:#8b6f4e">不可获取方块</span>
+  <span class="cn">基岩</span>
+  <code>bedrock</code>
+  <span class="why">生存模式无法正常获取</span>
+</div><div class="row" data-cat="unobtainable" data-id="end_portal_frame" data-cn="末地传送门框架">
+  <span class="badge" style="--c:#8b6f4e">不可获取方块</span>
+  <span class="cn">末地传送门框架</span>
+  <code>end_portal_frame</code>
+  <span class="why">生存模式无法正常获取</span>
+</div><div class="row" data-cat="unobtainable" data-id="reinforced_deepslate" data-cn="强化深板岩">
+  <span class="badge" style="--c:#8b6f4e">不可获取方块</span>
+  <span class="cn">强化深板岩</span>
+  <code>reinforced_deepslate</code>
+  <span class="why">生存模式无法正常获取</span>
+</div><div class="row" data-cat="unobtainable" data-id="petrified_oak_slab" data-cn="石化橡木台阶">
+  <span class="badge" style="--c:#8b6f4e">不可获取方块</span>
+  <span class="cn">石化橡木台阶</span>
+  <code>petrified_oak_slab</code>
+  <span class="why">生存模式无法正常获取</span>
+</div><div class="row" data-cat="unobtainable" data-id="dirt_path" data-cn="土径">
+  <span class="badge" style="--c:#8b6f4e">不可获取方块</span>
+  <span class="cn">土径</span>
+  <code>dirt_path</code>
+  <span class="why">生存模式无法正常获取</span>
+</div><div class="row" data-cat="unobtainable" data-id="budding_amethyst" data-cn="紫水晶母岩">
+  <span class="badge" style="--c:#8b6f4e">不可获取方块</span>
+  <span class="cn">紫水晶母岩</span>
+  <code>budding_amethyst</code>
+  <span class="why">生存模式无法正常获取</span>
+</div><div class="row" data-cat="trial" data-id="vault" data-cn="宝库">
+  <span class="badge" style="--c:#c98a1f">试炼/宝库</span>
+  <span class="cn">宝库</span>
+  <code>vault</code>
+  <span class="why">试炼密室的刷怪笼/宝库，生存无法获取本体</span>
+</div><div class="row" data-cat="trial" data-id="trial_spawner" data-cn="试炼刷怪笼">
+  <span class="badge" style="--c:#c98a1f">试炼/宝库</span>
+  <span class="cn">试炼刷怪笼</span>
+  <code>trial_spawner</code>
+  <span class="why">试炼密室的刷怪笼/宝库，生存无法获取本体</span>
+</div><div class="row" data-cat="test" data-id="test_block" data-cn="测试方块">
+  <span class="badge" style="--c:#3f74b8">测试方块</span>
+  <span class="cn">测试方块</span>
+  <code>test_block</code>
+  <span class="why">测试/调试用方块</span>
+</div><div class="row" data-cat="test" data-id="test_instance_block" data-cn="测试实例方块">
+  <span class="badge" style="--c:#3f74b8">测试方块</span>
+  <span class="cn">测试实例方块</span>
+  <code>test_instance_block</code>
+  <span class="why">测试/调试用方块</span>
+</div><div class="row" data-cat="removed" data-id="spawner" data-cn="刷怪笼">
+  <span class="badge" style="--c:#7c6f64">按要求移除</span>
+  <span class="cn">刷怪笼</span>
+  <code>spawner</code>
+  <span class="why">按需求从仓库点位移除，机器人按未映射投入 trash</span>
+</div><div class="row" data-cat="special" data-id="debug_stick" data-cn="调试棒">
+  <span class="badge" style="--c:#4f8f5a">特殊物品</span>
+  <span class="cn">调试棒</span>
+  <code>debug_stick</code>
+  <span class="why">仅命令/调试获取</span>
+</div><div class="row" data-cat="special" data-id="knowledge_book" data-cn="知识之书">
+  <span class="badge" style="--c:#4f8f5a">特殊物品</span>
+  <span class="cn">知识之书</span>
+  <code>knowledge_book</code>
+  <span class="why">仅命令/调试获取</span>
+</div><div class="row" data-cat="air" data-id="air" data-cn="空气">
+  <span class="badge" style="--c:#9ca3af">空气</span>
+  <span class="cn">空气</span>
+  <code>air</code>
+  <span class="why">非物品，仅占位</span>
+</div></div>
+</main>
+<footer>数据来源：items.json、item_map.csv、papers/序号-工作表1.csv。点位图：partition-2d.html。</footer>
+<script>
+const rows = [...document.querySelectorAll('.row')];
+const chips = [...document.querySelectorAll('.chip')];
+let cat = 'all';
+function apply() {
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  let n = 0;
+  for (const row of rows) {
+    const okCat = cat === 'all' || row.dataset.cat === cat;
+    const hay = (row.dataset.cn + ' ' + row.dataset.id).toLowerCase();
+    const okQ = !q || hay.includes(q);
+    const show = okCat && okQ;
+    row.style.display = show ? '' : 'none';
+    if (show) n++;
+  }
+  let empty = document.getElementById('empty');
+  if (!empty) { empty = document.createElement('div'); empty.id = 'empty'; empty.className = 'empty'; empty.textContent = '没有匹配项'; document.getElementById('list').appendChild(empty); }
+  empty.style.display = n ? 'none' : '';
+}
+document.getElementById('q').addEventListener('input', apply);
+for (const chip of chips) chip.addEventListener('click', () => {
+  cat = chip.dataset.cat;
+  chips.forEach(c => c.classList.toggle('on', c === chip));
+  apply();
+});
+apply();
+</script>
+</body>
+</html>
