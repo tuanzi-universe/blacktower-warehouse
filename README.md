@@ -76,6 +76,10 @@ python -m http.server 8000
 
 改 `tools/families.js` / `tools/build.js` → `build.js` → `validate.js` → `validate-coldhot.js` → `build-html.js` → 三个报告脚本。
 
+## 发布
+
+`.github/workflows/deploy-viewer.yml`：push 到 main/master（或手动触发）时，先跑三个校验脚本，通过后把 `viewer/` + `data/points/` 发布到 GitHub Pages。首次使用需在仓库 Settings → Pages 将 Source 设为 **GitHub Actions**。发布后访问 `https://<user>.github.io/<repo>/viewer/`。
+
 点位版本：
 
 - `data/points/itemsorter-points-v1.json`：冻结基准，build 不覆盖，只用于对比。

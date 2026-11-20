@@ -1,0 +1,64 @@
+# 发布 viewer/ 到 GitHub Pages
+#
+# 触发：push 到 main / master，或在 Actions 页手动运行。
+# 前置：仓库 Settings → Pages → Build and deployment → Source 选 "GitHub Actions"
+#       （下方的 configure-pages enablement 步骤通常会自动完成）。
+# 访问：https://<user>.github.io/<repo>/viewer/
+#
+# 说明：不跑 build.js——它依赖本地 bot 配置（C:/Projects/.../warehouse-bot），
+# CI 只校验并发布仓库内已提交的产物。
+# 组装时保留 viewer/ 与 data/points/ 的相对关系：页面内
+# fetch('../data/points/…') 在项目 Pages 的 /<repo>/ 子路径下才能正确解析，
+# 单独把 viewer/ 当站点根会因 ../ 逃出子路径而 404。
+
+name: deploy-viewer
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate
+        run: |
+          node tools/validate.js
+          node tools/validate-coldhot.js
+          node tools/test-points-io.js
+
+      - name: Assemble site
+        run: |
+          mkdir -p site/data
+          cp -r viewer site/viewer
+          cp -r data/points site/data/points
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
