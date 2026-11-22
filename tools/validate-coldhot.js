@@ -125,9 +125,9 @@ function labelsOfV3(area, side) {
 
 // ---------- v3 总量 / 每侧 ----------
 const expectSide = {
-  'A-L': 32, 'A-R': 27, 'B-L': 53, 'B-R': 49, 'C-L': 21, 'C-R': 27,
+  'A-L': 32, 'A-R': 27, 'B-L': 48, 'B-R': 53, 'C-L': 21, 'C-R': 27,
   'D-L': 44, 'D-R': 54, 'E-L': 21, 'E-R': 20, 'F-L': 44, 'F-R': 33,
-  'G-L': 51, 'G-R': 44, 'H-L': 52, 'H-R': 54,
+  'G-L': 51, 'G-R': 44, 'H-L': 51, 'H-R': 54,
 };
 const sideCount = {};
 for (const u of units) {
@@ -137,13 +137,13 @@ for (const u of units) {
 for (const [k, n] of Object.entries(expectSide)) {
   assert((sideCount[k] || 0) === n, `${k} 单元 ${sideCount[k] || 0}，应为 ${n}`);
 }
-assert(units.length === 626, `单元总数 ${units.length}，应为 626`);
-assert(units.filter(u => u.type === 'item').length === 542, `物品单元 ${units.filter(u => u.type === 'item').length}，应为 542`);
+assert(units.length === 624, `单元总数 ${units.length}，应为 624`);
+assert(units.filter(u => u.type === 'item').length === 540, `物品单元 ${units.filter(u => u.type === 'item').length}，应为 540`);
 assert(units.filter(u => u.type === 'enchant').length === 44, '附魔单元应为 44');
 assert(units.filter(u => u.type === 'potion').length === 40, '药水单元应为 40');
 const slotRows = readCsv('data/partition_new.csv');
 assert(slotRows.length === 880, `partition_new 行数 ${slotRows.length}，应为 880`);
-assert(slotRows.filter(r => r.unit_id).length === 626, 'partition_new 占用格应为 626');
+assert(slotRows.filter(r => r.unit_id).length === 624, 'partition_new 占用格应为 624');
 // v2 冻结文件完整性
 assert(v2fUnits.length === 581, `冻结 v2 单元 ${v2fUnits.length}，应为 581`);
 assert(v1Units.length === 575, `冻结 v1 单元 ${v1Units.length}，应为 575`);
@@ -157,7 +157,7 @@ const auxUnits = units.filter(u => !hotUnits.includes(u) && ['A', 'C', 'E', 'G']
 const coldAreaUnits = units.filter(u => ['B', 'D', 'F', 'H'].includes(u.area));
 assert(hotUnits.length === 189, `热单元 ${hotUnits.length}，应为 189（矿物 32 + 红石 21 + 药水 41 + G 95）`);
 assert(auxUnits.length === 54, `热区附属单元 ${auxUnits.length}，应为 54（A-R 27 + C-R 27，含船/门/活板门）`);
-assert(coldAreaUnits.length === 383, `冷区 B/D/F/H 单元 ${coldAreaUnits.length}，应为 383`);
+assert(coldAreaUnits.length === 381, `冷区 B/D/F/H 单元 ${coldAreaUnits.length}，应为 381`);
 assert(hotUnits.filter(u => u.id.startsWith('MIN:')).length === 32, '矿物热单元应为 32');
 assert(hotUnits.filter(u => u.id.startsWith('RED:')).length === 21, '红石热单元应为 21');
 assert(hotUnits.filter(u => u.type === 'potion').length === 40, '热区药水单元应为 40');
@@ -170,9 +170,10 @@ assert(!hotUnits.some(u => u.id.startsWith('TERRAIN:')), '地形不应在热区�
   const terrainUnits = units.filter(u => u.id.startsWith('TERRAIN:'));
   assert(terrainUnits.length === 51, `地形拆单 ${terrainUnits.length}，应为 51`);
   assert(terrainUnits.every(u => u.area === 'H'), '地形拆单应全部在 H 区');
-  const snowball = unitById.get('RAW:snowball');
-  assert(snowball && snowball.area === 'H' && snowball.side === 'L' && snowball.slot === 21,
-    `雪球应在 H-L 21: ${snowball ? `${snowball.area}-${snowball.side}-${snowball.slot}` : '缺失'}`);
+  const snowUnit = v3LabelMap.get('雪（含雪球）');
+  assert(snowUnit && snowUnit.area === 'H' && snowUnit.side === 'L' && snowUnit.slot === 19 &&
+    eqSet(sorted(snowUnit.items), ['snow', 'snowball']),
+    `雪（含雪球）应在 H-L 19 且含 snow/snowball: ${snowUnit ? `${snowUnit.area}-${snowUnit.side}-${snowUnit.slot} ${snowUnit.items}` : '缺失'}`);
   const bowl = unitById.get('RAW:bowl');
   assert(bowl && bowl.area === 'G' && bowl.side === 'L' && bowl.slot === 10,
     `碗应在 G-L 10: ${bowl ? `${bowl.area}-${bowl.side}-${bowl.slot}` : '缺失'}`);
@@ -187,13 +188,13 @@ const expectedHL = [
   '泥土', '砂土', '缠根泥土', '草方块', '菌丝体', '灰化土', '泥巴', '沾泥的红树根',
   '黏土', '黏土球', '沙子', '可疑的沙子', '红沙', '沙砾', '燧石', '可疑的沙砾',
   '苔藓（含覆地苔藓）', '苍白苔藓（含覆地苔藓）',
-  '雪', '雪块', '雪球', '冰', '浮冰', '蓝冰', '海绵（含湿海绵）',
+  '雪（含雪球）', '雪块', '冰', '浮冰', '蓝冰', '海绵（含湿海绵）',
   '红砖块', '红砖', '压实泥', '砂岩', '红砂岩', '下界砖块', '下界砖', '红色下界砖块',
   '海晶石', '暗海晶石', '紫珀块', '树脂块', '树脂', '镶金黑石',
   '瓦', '楼梯', '台阶', '雕纹', '切制', '平滑', '裂纹', '柱', '蛀蚀', '砖',
   '墙', '栅栏', '栅栏门',
 ];
-assert(expectedHL.length === 52, `H-L 序列 ${expectedHL.length}，应为 52`);
+assert(expectedHL.length === 51, `H-L 序列 ${expectedHL.length}，应为 51`);
 {
   const actual = labelsOfV3('H', 'L');
   const d = diffSet(expectedHL, actual);
@@ -265,16 +266,16 @@ if (boat) {
 
 // ---------- v3 锚点（v2→v3 关键落位）----------
 const anchors = [
-  // B-L：染料 16 同侧（零跨侧断档）+ 羊毛 16 + 潜影盒 3（玻璃前方）+ 玻璃/遮光 + 染色玻璃 16
+  // B-L：染料 16 + 羊毛 16 + 混凝土 16（羊毛后方）
   ['B-L', 1, '白色染料'], ['B-L', 16, '粉红色染料'],
   ['B-L', 17, '白色羊毛/地毯'], ['B-L', 32, '粉红色羊毛/地毯'],
-  ['B-L', 33, '彩色潜影盒 1/2'], ['B-L', 35, '潜影盒（无色）'],
-  ['B-L', 36, '玻璃'], ['B-L', 37, '遮光玻璃'],
-  ['B-L', 38, '白色染色玻璃'], ['B-L', 53, '粉红色染色玻璃'],
-  // B-R：陶瓦家族整侧 + 混凝土
-  ['B-R', 1, '陶瓦（无色）'], ['B-R', 2, '白色陶瓦'], ['B-R', 16, '品红色陶瓦'], ['B-R', 17, '粉红色陶瓦'],
-  ['B-R', 18, '白色带釉陶瓦'], ['B-R', 33, '粉红色带釉陶瓦'],
-  ['B-R', 34, '白色混凝土'], ['B-R', 49, '粉红色混凝土'],
+  ['B-L', 33, '白色混凝土'], ['B-L', 48, '粉红色混凝土'],
+  // B-R：潜影盒 3（开头）+ 玻璃（白色染色玻璃前）+ 染色玻璃 16 + 遮光玻璃（粉染色玻璃后方）+ 陶瓦家族
+  ['B-R', 1, '潜影盒（含彩色）1/2'], ['B-R', 2, '潜影盒（含彩色）2/2'], ['B-R', 3, '玻璃'],
+  ['B-R', 4, '白色染色玻璃'], ['B-R', 19, '粉红色染色玻璃'], ['B-R', 20, '遮光玻璃'],
+  ['B-R', 21, '陶瓦（无色）'], ['B-R', 22, '白色陶瓦'],
+  ['B-R', 36, '品红色陶瓦'], ['B-R', 37, '粉红色陶瓦'],
+  ['B-R', 38, '白色带釉陶瓦'], ['B-R', 53, '粉红色带釉陶瓦'],
   // C-R：潜影盒迁出；船/门/活板门插入矿车旁
   ['C-R', 1, '铁轨'], ['C-R', 2, '矿车'], ['C-R', 3, '船/门/活板门'],
   ['C-R', 4, '箱子/桶'], ['C-R', 5, '铜箱'], ['C-R', 6, '熔炉'],
@@ -319,11 +320,11 @@ const anchors = [
   // H-L 关键锚点（海绵/苔藓合并后）
   ['H-L', 9, '黏土'], ['H-L', 10, '黏土球'], ['H-L', 14, '沙砾'], ['H-L', 15, '燧石'],
   ['H-L', 17, '苔藓（含覆地苔藓）'], ['H-L', 18, '苍白苔藓（含覆地苔藓）'],
-  ['H-L', 21, '雪球'], ['H-L', 25, '海绵（含湿海绵）'],
-  ['H-L', 26, '红砖块'], ['H-L', 27, '红砖'], ['H-L', 31, '下界砖块'], ['H-L', 32, '下界砖'],
-  ['H-L', 37, '树脂块'], ['H-L', 38, '树脂'], ['H-L', 39, '镶金黑石'],
-  ['H-L', 40, '瓦'], ['H-L', 41, '楼梯'], ['H-L', 42, '台阶'],
-  ['H-L', 49, '砖'], ['H-L', 50, '墙'], ['H-L', 52, '栅栏门'],
+  ['H-L', 20, '雪块'], ['H-L', 24, '海绵（含湿海绵）'],
+  ['H-L', 25, '红砖块'], ['H-L', 26, '红砖'], ['H-L', 30, '下界砖块'], ['H-L', 31, '下界砖'],
+  ['H-L', 36, '树脂块'], ['H-L', 37, '树脂'], ['H-L', 38, '镶金黑石'],
+  ['H-L', 39, '瓦'], ['H-L', 40, '楼梯'], ['H-L', 41, '台阶'],
+  ['H-L', 48, '砖'], ['H-L', 49, '墙'], ['H-L', 51, '栅栏门'],
   ['H-R', 2, '圆石'], ['H-R', 3, '平滑石头'], ['H-R', 4, '苔石'],
   // H-R 尾段：床/旗帜/旗帜图案/蜡烛/坐垫 自 B 迁入
   ['H-R', 50, '床'], ['H-R', 51, '旗帜'], ['H-R', 52, '旗帜图案'],
@@ -350,8 +351,8 @@ assert(!units.some(u => u.id.startsWith('COLOR:shulker') && u.area !== 'B'), '�
 {
   const glassUnit = v3LabelMap.get('玻璃');
   const shulkers = units.filter(u => u.id.startsWith('COLOR:shulker'));
-  assert(shulkers.every(u => u.side === 'L' && glassUnit && u.slot < glassUnit.slot),
-    '潜影盒应在 B-L 玻璃前方');
+  assert(shulkers.every(u => u.side === 'R' && glassUnit && u.slot < glassUnit.slot),
+    '潜影盒应在 B-R 开头、玻璃前方');
 }
 
 // ---------- v3 物品集合 ----------

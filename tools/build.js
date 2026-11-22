@@ -249,22 +249,20 @@ for (const [color, cn] of COLOR_NAMES) {
     items: pickColor(color, ['stained_glass', 'stained_glass_pane']),
   });
 }
+// 潜影盒两格，均可存潜影盒（含彩色）：1/2 = 无色 + 白→黄，2/2 = 黄绿→粉
 const SHULKER_GROUPS = [
-  { id: 'COLOR:shulker_1', cn: '彩色潜影盒 1/2', colors: COLOR_NAMES.slice(0, 8) },
-  { id: 'COLOR:shulker_2', cn: '彩色潜影盒 2/2', colors: COLOR_NAMES.slice(8) },
+  { id: 'COLOR:shulker_1', cn: '潜影盒（含彩色）1/2', colors: COLOR_NAMES.slice(0, 8), plain: true },
+  { id: 'COLOR:shulker_2', cn: '潜影盒（含彩色）2/2', colors: COLOR_NAMES.slice(8) },
 ];
 for (const group of SHULKER_GROUPS) {
+  const items = group.colors.flatMap(([color]) => pickColor(color, ['shulker_box']));
+  if (group.plain && colorItems.has('shulker_box')) items.unshift('shulker_box');
   colorNew.push({
     id: group.id, area: 'B', side: 'R', entry_type: 'item', group: '收纳',
-    cn: group.cn, family: group.id, rep: `${group.colors[0][0]}_shulker_box`,
-    items: group.colors.flatMap(([color]) => pickColor(color, ['shulker_box'])),
+    cn: group.cn, family: group.id, rep: items[0],
+    items,
   });
 }
-colorNew.push({
-  id: 'COLOR:shulker', area: 'B', side: 'R', entry_type: 'item', group: '收纳',
-  cn: '潜影盒（无色）', family: 'COLOR:shulker', rep: 'shulker_box',
-  items: colorItems.has('shulker_box') ? ['shulker_box'] : [],
-});
 for (const [color, cn] of COLOR_NAMES) {
   colorNew.push({
     id: `COLOR:${color}:glazed`, area: 'B', side: 'L', entry_type: 'item', group: '色系',
@@ -439,6 +437,19 @@ for (const u of terrainOriginals) {
     });
     continue;
   }
+  if (u.id === 'TERRAIN:snow') {
+    hlSplit.push({
+      id: 'TERRAIN:snow', area: 'H', side: 'L', entry_type: 'item',
+      group: u.group, cn: '雪（含雪球）', family: 'TERRAIN:snow',
+      rep: 'snow', items: ['snow', 'snowball'],
+    });
+    hlSplit.push({
+      id: 'TERRAIN:snow:block', area: 'H', side: 'L', entry_type: 'item',
+      group: u.group, cn: '雪块', family: 'TERRAIN:snow:block',
+      rep: 'snow_block', items: ['snow_block'],
+    });
+    continue;
+  }
   if (u.id === 'TERRAIN:moss') {
     hlSplit.push({
       id: 'TERRAIN:moss', area: 'H', side: 'L', entry_type: 'item',
@@ -495,26 +506,27 @@ const terraUnits = COLOR_NAMES.map(([c]) => byId(`COLOR:${c}:terracotta`));
 const glazedUnits = COLOR_NAMES.map(([c]) => byId(`COLOR:${c}:glazed`));
 const stainedUnits = COLOR_NAMES.map(([c]) => byId(`COLOR:${c}:glass`));
 const concreteUnits = COLOR_NAMES.map(([c]) => byId(`COLOR:${c}:concrete`));
-const shulkerUnits = ['COLOR:shulker_1', 'COLOR:shulker_2', 'COLOR:shulker'].map(byId);
+const shulkerUnits = ['COLOR:shulker_1', 'COLOR:shulker_2'].map(byId);
 const bedUnits = ['COLOR:bed', 'COLOR:banner', 'COLLECT:banner_pattern', 'COLOR:candle', 'COLOR:cushion'].map(byId);
 const bannerPatternUnit = byId('COLLECT:banner_pattern');
 
-// B-L：染料16 同侧（零跨侧断档）+ 羊毛16 + 潜影盒3（玻璃前方）+ 玻璃/遮光玻璃 + 染色玻璃16
+// B-L：染料16 + 羊毛16 + 混凝土16（羊毛后方）
+// B-R：潜影盒3（开头）+ 玻璃（白色染色玻璃前）+ 染色玻璃16（白→粉）+ 遮光玻璃（粉染色玻璃后方）
+//   + 陶瓦家族（无色最前）+ 带釉陶瓦——所有色组整侧不跨侧（2026-11-22 第七轮顺序）
 const dyeAll = COLOR_NAMES.map(([c]) => byId(`COLOR:${c}:dye`));
 const bL = [
   ...dyeAll,
   ...woolUnits,
+  ...concreteUnits,
+];
+const bR = [
   ...shulkerUnits,
   byId('BUILD:glass'),
-  byId('BUILD:tinted_glass'),
   ...stainedUnits,
-];
-// B-R：陶瓦家族（无色居最前）+ 带釉陶瓦 + 混凝土，整组不跨侧
-const bR = [
+  byId('BUILD:tinted_glass'),
   byId('COLOR:terracotta'),
   ...terraUnits,
   ...glazedUnits,
-  ...concreteUnits,
 ];
 
 // D-R：工具→护甲→远程（钓鱼竿含两种钓竿）→弹药→坐骑/挽具/收纳袋→导航/时钟→杂项拆分→收藏
@@ -623,7 +635,7 @@ const hLLeft = [
   t('sand'), t('suspicious_sand'), t('red_sand'),
   t('gravel'), byId('RAW:flint'), t('suspicious_gravel'),
   t('moss_block'), t('pale_moss_block'),
-  t('snow'), t('snow_block'), byId('RAW:snowball'),
+  t('snow'), t('snow_block'),
   t('ice'), t('packed_ice'), t('blue_ice'),
   t('sponge'),
 ];
@@ -716,11 +728,11 @@ const counts = [
   ['工作站', workUnits.length, 26],
   ['木材', woodUnits.length, 26],
   ['合成原材主', rawMain.length, 1],
-  ['色彩 L', bL.length, 53],
-  ['色彩 R', bR.length, 49],
+  ['色彩 L', bL.length, 48],
+  ['色彩 R', bR.length, 53],
   ['染料', COLOR_NAMES.length, 16],
   ['床旗图案蜡烛坐垫', bedUnits.length, 5],
-  ['潜影盒', shulkerUnits.length, 3],
+  ['潜影盒', shulkerUnits.length, 2],
   ['D-R', dR.length, 54],
   ['附魔', enchantUnits.length, 44],
   ['正面药水', fLPotions.length, 20],
@@ -736,7 +748,7 @@ const counts = [
   ['船/门/活板门', byId('WOODWORK:boat_door').items.length, 48],
   ['告示牌', byId('BUILD:v_sign').items.length, 26],
   ['展示架', byId('BUILD:v_shelf').items.length, 13],
-  ['H-L', hL.length, 52],
+  ['H-L', hL.length, 51],
   ['H-R', hR.length, 54],
 ];
 for (const [name, got, want] of counts) {
@@ -766,9 +778,9 @@ for (const u of unitInstances.filter(x => x.id.startsWith('BUILD:base_'))) {
 
 const SIDE_ORDER = ['A-L', 'A-R', 'B-L', 'B-R', 'C-L', 'C-R', 'D-L', 'D-R', 'E-L', 'E-R', 'F-L', 'F-R', 'G-L', 'G-R', 'H-L', 'H-R'];
 const expectLen = {
-  'A-L': 32, 'A-R': 27, 'B-L': 53, 'B-R': 49, 'C-L': 21, 'C-R': 27,
+  'A-L': 32, 'A-R': 27, 'B-L': 48, 'B-R': 53, 'C-L': 21, 'C-R': 27,
   'D-L': 44, 'D-R': 54, 'E-L': 21, 'E-R': 20, 'F-L': 44, 'F-R': 33,
-  'G-L': 51, 'G-R': 44, 'H-L': 52, 'H-R': 54,
+  'G-L': 51, 'G-R': 44, 'H-L': 51, 'H-R': 54,
 };
 const globalSeen = new Set();
 for (const key of SIDE_ORDER) {
@@ -787,7 +799,7 @@ for (const key of SIDE_ORDER) {
 for (const u of unitInstances) {
   if (!globalSeen.has(u.id)) throw new Error(`源单元未分配 ${u.id}`);
 }
-if (globalSeen.size !== 626) throw new Error(`分配单元 ${globalSeen.size}，应为 626`);
+if (globalSeen.size !== 624) throw new Error(`分配单元 ${globalSeen.size}，应为 624`);
 unitInstances = SIDE_ORDER.flatMap(key => bySide.get(key));
 
 const placed = new Map();
