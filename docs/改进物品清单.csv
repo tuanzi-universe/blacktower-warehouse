@@ -269,11 +269,11 @@ coal_block,煤炭块,A-L,A-L MIN:coal_block,同区调整
 coal_ore,煤矿石,,A-L MIN:coal,新增上架
 coarse_dirt,砂土,H-L,E-L TERRAIN:dirt:coarse_dirt,重新归位
 coast_armor_trim_smithing_template,锻造模板,,D-R COLLECT:smithing_template,新增上架
-cobbled_deepslate,深板岩圆石,H-R,E-L TERRAIN:deepslate:cobbled_deepslate,重新归位
+cobbled_deepslate,深板岩圆石,H-R,E-R TERRAIN:deepslate:cobbled_deepslate,重新归位
 cobbled_deepslate_slab,深板岩圆石台阶,,H-L BUILD:v_slab,新增上架
 cobbled_deepslate_stairs,深板岩圆石楼梯,,H-L BUILD:v_stairs,新增上架
 cobbled_deepslate_wall,深板岩圆石墙,,H-L BUILD:wall,新增上架
-cobblestone,圆石,H-R,E-L TERRAIN:stone:cobblestone,重新归位
+cobblestone,圆石,H-R,E-R TERRAIN:stone:cobblestone,重新归位
 cobblestone_slab,圆石台阶,,H-L BUILD:v_slab,新增上架
 cobblestone_stairs,圆石楼梯,,H-L BUILD:v_stairs,新增上架
 cobblestone_wall,圆石墙,,H-L BUILD:wall,新增上架
@@ -418,7 +418,7 @@ dead_tube_coral,失活的管珊瑚,,F-R PLANT:coral_dead,新增上架
 dead_tube_coral_block,失活的管珊瑚块,,F-R PLANT:coral_dead,新增上架
 dead_tube_coral_fan,失活的管珊瑚扇,,F-R PLANT:coral_dead,新增上架
 decorated_pot,饰纹陶罐,,H-R COLLECT:decorated_pot,新增上架
-deepslate,深板岩,H-R,E-L TERRAIN:deepslate:deepslate,重新归位
+deepslate,深板岩,H-R,E-R TERRAIN:deepslate:deepslate,重新归位
 deepslate_brick_slab,深板岩砖台阶,,H-L BUILD:v_slab,新增上架
 deepslate_brick_stairs,深板岩砖楼梯,,H-L BUILD:v_stairs,新增上架
 deepslate_brick_wall,深板岩砖墙,,H-L BUILD:wall,新增上架
@@ -466,7 +466,7 @@ dragon_head,龙首,,G-L COLLECT:head_dragon,新增上架
 dried_ghast,失水恶魂,G-L,G-L DROP:dried_ghast,同区调整
 dried_kelp,干海带,,F-R PLANT:kelp,新增上架
 dried_kelp_block,干海带块,,F-R PLANT:kelp,新增上架
-dripstone_block,滴水石块,H-L,E-L TERRAIN:dripstone:dripstone_block,重新归位
+dripstone_block,滴水石块,H-L,E-R TERRAIN:dripstone:dripstone_block,重新归位
 dropper,投掷器,C-L,C-L RED:dispenser,同区调整
 dune_armor_trim_smithing_template,锻造模板,,D-R COLLECT:smithing_template,新增上架
 echo_shard,回响碎片,G-L,G-L DROP:echo_shard,同区调整
@@ -825,7 +825,7 @@ miner_pottery_sherd,采矿纹样陶片,,G-R COLLECT:sherd,新增上架
 mojang_banner_pattern,旗帜图案,,G-R COLLECT:banner_pattern,新增上架
 moss_block,苔藓块,H-L,E-L TERRAIN:moss:moss_block,重新归位
 moss_carpet,覆地苔藓,,E-L TERRAIN:moss:moss_carpet,新增上架
-mossy_cobblestone,苔石,B-L,E-L TERRAIN:stone:mossy_cobblestone,重新归位
+mossy_cobblestone,苔石,B-L,E-R TERRAIN:stone:mossy_cobblestone,重新归位
 mossy_cobblestone_slab,苔石台阶,,H-L BUILD:v_slab,新增上架
 mossy_cobblestone_stairs,苔石楼梯,,H-L BUILD:v_stairs,新增上架
 mossy_cobblestone_wall,苔石墙,,H-L BUILD:wall,新增上架
@@ -1262,7 +1262,7 @@ spectral_arrow,光灵箭,,D-R GEAR:arrow,新增上架
 spider_eye,蜘蛛眼,G-L,G-L DROP:spider_eye,同区调整
 spire_armor_trim_smithing_template,锻造模板,,D-R COLLECT:smithing_template,新增上架
 splash_potion,喷溅药水,,F-L POTION:instant_health | F-L POTION:regeneration | F-L POTION:fire_resistance | F-L POTION:water_breathing | F-L POTION:breath_of_the_nautilus | F-L POTION:slow_falling | F-L POTION:speed | F-L POTION:jump_boost | F-L POTION:strength | F-L POTION:night_vision | F-L POTION:invisibility | F-L POTION:luck | F-L POTION:absorption | F-L POTION:resistance | F-L POTION:health_boost | F-L POTION:saturation | F-L POTION:haste | F-L POTION:conduit_power | F-L POTION:dolphins_grace | F-L POTION:hero_of_the_village | F-R POTION:instant_damage | F-R POTION:poison | F-R POTION:slowness | F-R POTION:weakness | F-R POTION:wither | F-R POTION:hunger | F-R POTION:nausea | F-R POTION:blindness | F-R POTION:darkness | F-R POTION:levitation | F-R POTION:mining_fatigue | F-R POTION:glowing | F-R POTION:bad_omen | F-R POTION:raid_omen | F-R POTION:trial_omen | F-R POTION:unluck | F-R POTION:wind_charged | F-R POTION:weaving | F-R POTION:oozing | F-R POTION:infested,属性单元
-sponge,海绵,,E-R TERRAIN:sponge:sponge,新增上架
+sponge,海绵,,E-L TERRAIN:sponge:sponge,新增上架
 spore_blossom,孢子花,,F-L PLANT:spore_blossom,新增上架
 spruce_boat,云杉木船,C-R,H-R WOODWORK:boat_door,重新归位
 spruce_button,云杉木按钮,,C-L RED:button,新增上架
@@ -1285,7 +1285,7 @@ spruce_wood,云杉木,,A-R WOODLOG:spruce,新增上架
 spyglass,望远镜,,D-R GEAR:spyglass,新增上架
 stick,木棍,,A-R RAW:stick,新增上架
 sticky_piston,黏性活塞,C-L,C-L RED:piston,同区调整
-stone,石头,H-R,E-L TERRAIN:stone:stone,重新归位
+stone,石头,H-R,E-R TERRAIN:stone:stone,重新归位
 stone_axe,石斧,,D-R TOOL:axe,新增上架
 stone_brick_slab,石砖台阶,,H-L BUILD:v_slab,新增上架
 stone_brick_stairs,石砖楼梯,,H-L BUILD:v_stairs,新增上架
@@ -1484,7 +1484,7 @@ weathered_cut_copper_slab,锈蚀的切制铜台阶,B-R,H-R BUILD:copper,重新�
 weathered_cut_copper_stairs,锈蚀的切制铜楼梯,B-R,H-R BUILD:copper,重新归位
 weathered_lightning_rod,锈蚀的避雷针,,C-L RED:lightning_rod,新增上架
 weeping_vines,垂泪藤,F-R,F-R PLANT:weeping_vines,同区调整
-wet_sponge,湿海绵,,E-R TERRAIN:sponge:wet_sponge,新增上架
+wet_sponge,湿海绵,,E-L TERRAIN:sponge:wet_sponge,新增上架
 wheat,小麦,F-R,F-R CROP:wheat,同区调整
 wheat_seeds,小麦种子,F-R,F-R CROP:wheat,同区调整
 white_banner,白色旗帜,,B-L COLOR:banner,新增上架

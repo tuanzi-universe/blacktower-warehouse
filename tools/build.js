@@ -511,13 +511,47 @@ for (const u of gR) {
   if (u.id === 'FOOD:suspicious_stew') gRWithBowl.push(bowlUnit);
 }
 if (!gRWithBowl.includes(bowlUnit)) throw new Error('碗未插入 G-R 炖菜后');
-// E 区两侧均衡并靠北：地形 53 拆 29/24，L/R 都从 slot 1 起；光源 5 接 E-R 地形尾部。
-const snowIdx = terrainUnits.findIndex(u => u.id === 'TERRAIN:snow:snow_block');
-if (snowIdx < 0) throw new Error('缺少雪块地形单元');
-const eTerrainL = [...terrainUnits.slice(0, snowIdx + 1), snowballUnit, ...terrainUnits.slice(snowIdx + 1, 29)];
-const eTerrainR = terrainUnits.slice(29);
-if (eTerrainL.length !== 30) throw new Error(`E-L 地形+雪球 ${eTerrainL.length}，应为 30`);
-if (eTerrainR.length !== 24) throw new Error(`E-R 地形 ${eTerrainR.length}，应为 24`);
+// E 区两侧按主题分组并靠北：L 土/沙/砂/苔藓/雪/冰/海绵；R 石/下界石类/末地石/黑曜石/光源方块/硫黄。
+// 雪球仍接雪块；海绵接冰后；E-R 顺序为石系 → 下界石类 → 末地石 → 黑曜石 → 光源 5 → 硫黄/朱砂。
+const terrainByRep = new Map(terrainUnits.map(u => [u.rep, u]));
+const eLSide = [
+  'dirt', 'coarse_dirt', 'rooted_dirt', 'grass_block', 'mycelium', 'podzol', 'mud', 'muddy_mangrove_roots', 'clay',
+  'sand', 'suspicious_sand', 'red_sand',
+  'gravel', 'suspicious_gravel',
+  'moss_block', 'moss_carpet', 'pale_moss_block', 'pale_moss_carpet',
+  'snow', 'snow_block',
+  'ice', 'packed_ice', 'blue_ice',
+  'sponge', 'wet_sponge',
+];
+const eRStone = [
+  'stone', 'cobblestone', 'mossy_cobblestone', 'deepslate', 'cobbled_deepslate',
+  'andesite', 'diorite', 'granite', 'tuff', 'calcite',
+  'dripstone_block', 'pointed_dripstone',
+];
+const eRNether = [
+  'basalt', 'blackstone', 'netherrack', 'crimson_nylium', 'warped_nylium',
+  'soul_sand', 'soul_soil', 'nether_wart_block', 'warped_wart_block',
+];
+const eRSulfur = ['sulfur', 'potent_sulfur', 'sulfur_spike', 'cinnabar'];
+const snowPos = eLSide.indexOf('snow_block') + 1;
+const eTerrainL = [
+  ...eLSide.slice(0, snowPos).map(id => terrainByRep.get(id)),
+  snowballUnit,
+  ...eLSide.slice(snowPos).map(id => terrainByRep.get(id)),
+];
+const eTerrainR = [
+  ...eRStone.map(id => terrainByRep.get(id)),
+  ...eRNether.map(id => terrainByRep.get(id)),
+  terrainByRep.get('end_stone'),
+  terrainByRep.get('obsidian'), terrainByRep.get('crying_obsidian'),
+  ...lightUnits,
+  ...eRSulfur.map(id => terrainByRep.get(id)),
+];
+if (eTerrainL.some(u => !u) || eTerrainR.some(u => !u)) throw new Error('E 区主题分组存在未知地形物品');
+const eTerrainReps = new Set([...eTerrainL, ...eTerrainR].filter(u => u !== snowballUnit && !lightUnits.includes(u)).map(u => u.rep));
+if (eTerrainReps.size !== terrainUnits.length) throw new Error('E 区地形未完整覆盖');
+if (eTerrainL.length !== 26) throw new Error(`E-L 地形+雪球 ${eTerrainL.length}，应为 26`);
+if (eTerrainR.length !== 33) throw new Error(`E-R 地形+光+硫黄 ${eTerrainR.length}，应为 33`);
 
 const counts = [
   ['矿物', minUnits.length, 25],
@@ -528,8 +562,8 @@ const counts = [
   ['工作站/容器', workUnits.length, 26],
   ['C-R', cR.length, 29],
   ['地形', terrainUnits.length, 53],
-  ['E-L 地形+雪球', eTerrainL.length, 30],
-  ['E-R 地形', eTerrainR.length, 24],
+  ['E-L 地形+雪球', eTerrainL.length, 26],
+  ['E-R 地形+光+硫黄', eTerrainR.length, 33],
   ['光源', lightUnits.length, 5],
   ['基础方块+树脂', baseWithResin.length, 14],
   ['变体组', groupUnits.length, 12],
@@ -581,7 +615,7 @@ const bySide = new Map([
   ['D-L', enchantUnits],
   ['D-R', dR],
   ['E-L', eTerrainL],
-  ['E-R', [...eTerrainR, ...lightUnits]],
+  ['E-R', eTerrainR],
   ['F-L', [...fLPlants, null, null, null, null, glassBottleUnit, ...fLPotions]],
   ['F-R', [...fRPlants, null, null, null, null, null, null, ...fRPotions]],
   ['G-L', gL],
@@ -592,12 +626,12 @@ const bySide = new Map([
 
 const expectLen = {
   'A-L': 25, 'A-R': 31, 'B-L': 52, 'B-R': 37, 'C-L': 21, 'C-R': 29,
-  'D-L': 44, 'D-R': 31, 'E-L': 30, 'E-R': 29, 'F-L': 55, 'F-R': 55,
+  'D-L': 44, 'D-R': 31, 'E-L': 26, 'E-R': 33, 'F-L': 55, 'F-R': 55,
   'G-L': 45, 'G-R': 54, 'H-L': 29, 'H-R': 24,
 };
 const expectUnits = {
   'A-L': 25, 'A-R': 31, 'B-L': 52, 'B-R': 37, 'C-L': 21, 'C-R': 29,
-  'D-L': 44, 'D-R': 31, 'E-L': 30, 'E-R': 29, 'F-L': 51, 'F-R': 49,
+  'D-L': 44, 'D-R': 31, 'E-L': 26, 'E-R': 33, 'F-L': 51, 'F-R': 49,
   'G-L': 45, 'G-R': 54, 'H-L': 29, 'H-R': 24,
 };
 const globalSeen = new Set();

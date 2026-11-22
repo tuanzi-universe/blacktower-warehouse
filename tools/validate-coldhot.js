@@ -112,7 +112,7 @@ function labelsOfV2(area, side) {
 // ---------- 总量 / 每侧 ----------
 const expectSide = {
   'A-L': 25, 'A-R': 31, 'B-L': 52, 'B-R': 37, 'C-L': 21, 'C-R': 29,
-  'D-L': 44, 'D-R': 31, 'E-L': 30, 'E-R': 29, 'F-L': 51, 'F-R': 49,
+  'D-L': 44, 'D-R': 31, 'E-L': 26, 'E-R': 33, 'F-L': 51, 'F-R': 49,
   'G-L': 45, 'G-R': 54, 'H-L': 29, 'H-R': 24,
 };
 const sideCount = {};
@@ -158,9 +158,9 @@ for (const u of units) {
     (u.area === 'G' && u.side === 'R' && u.id === 'RAW:bowl');
   assert(!inHotArea || allowedAux, `非热单元进入热区: ${u.id} ${u.area}-${u.side}`);
   if (u.area === 'E' && u.side === 'R' && u.id.startsWith('BUILD:light_')) {
-    assert(u.slot >= 25, `E-R 光源位置错误: ${u.id} ${u.slot}`);
+    assert(u.slot >= 25 && u.slot <= 29, `E-R 光源位置错误: ${u.id} ${u.slot}`);
   }
-  if (u.id === 'RAW:snowball') assert(u.area === 'E' && u.side === 'L' && u.slot === 26, `雪球应在 E-L 26: ${u.area}-${u.side}-${u.slot}`);
+  if (u.id === 'RAW:snowball') assert(u.area === 'E' && u.side === 'L' && u.slot === 21, `雪球应在 E-L 21: ${u.area}-${u.side}-${u.slot}`);
   if (u.id === 'RAW:bowl') assert(u.area === 'G' && u.side === 'R' && u.slot === 10, `碗应在 G-R 10: ${u.area}-${u.side}-${u.slot}`);
 }
 
@@ -268,8 +268,31 @@ const expectedB_R = labelsOfV1('E', 'R');
 const lightLabels = units.filter(u => u.id.startsWith('BUILD:light_'))
   .sort((a, b) => a.slot - b.slot).map(u => u.cn);
 const terrainLabels = labelsOfV1('H', 'L');
-const expectedE_L = [...terrainLabels.slice(0, 25), '雪球', ...terrainLabels.slice(25, 29)];
-const expectedE_R = [...terrainLabels.slice(29), ...lightLabels];
+// E 区主题分组（v1 H-L 标签序）：0–7 泥土系，8–12 石头/圆石/深板岩，13–16 苔藓，17 黏土，
+// 18–19 沙砾，20–22 沙，23–24 雪，25–27 冰，28–29 滴水石，30–34 安山岩~方解石，
+// 35–41 下界（玄武岩~灵魂土），42 末地石，43–44 黑曜石，45–46 海绵，47–50 硫黄/朱砂，51–52 疣块。
+// E-L = 土 0–7+黏土 17 → 沙 20–22 → 砂 18–19 → 苔藓 13–16 → 雪 23–24+雪球 → 冰 25–27 → 海绵 45–46；
+// E-R = 石(8–12,28–34) → 下界石类(35–41,51–52) → 末地石 42 → 黑曜石 43–44 → 光源 5 → 硫黄/朱砂 47–50。
+const expectedE_L = [
+  ...terrainLabels.slice(0, 8), terrainLabels[17],
+  ...terrainLabels.slice(20, 23),
+  ...terrainLabels.slice(18, 20),
+  ...terrainLabels.slice(13, 17),
+  ...terrainLabels.slice(23, 25), '雪球',
+  ...terrainLabels.slice(25, 28),
+  ...terrainLabels.slice(45, 47),
+];
+const expectedE_R = [
+  ...terrainLabels.slice(8, 13),
+  ...terrainLabels.slice(30, 35),
+  ...terrainLabels.slice(28, 30),
+  ...terrainLabels.slice(35, 42),
+  ...terrainLabels.slice(51, 53),
+  ...terrainLabels.slice(42, 43),
+  ...terrainLabels.slice(43, 45),
+  ...lightLabels,
+  ...terrainLabels.slice(47, 51),
+];
 const rawMoveLabels = ['树脂', '纸', '书', '碗', '玻璃瓶', '雪球'];
 const expectedA_R = labelsOfV1('A', 'R').filter(l => !rawMoveLabels.includes(l));
 const fLV1 = labelsOfV1('F', 'L');
