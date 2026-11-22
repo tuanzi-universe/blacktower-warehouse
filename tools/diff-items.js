@@ -35,12 +35,10 @@ function readCsv(file) {
   });
 }
 
-const oldRows = readCsv(path.join(ROOT, 'data', 'partition.csv'));
+const oldRows = readCsv(path.join(ROOT, 'data', 'item_map-v2.csv'));
 const oldMap = new Map();
 for (const r of oldRows) {
-  const id = r.block_id.replace(/^minecraft:/, '');
-  if (id === 'air') continue;
-  if (!oldMap.has(id)) oldMap.set(id, r.area + '-' + r.side);
+  if (!oldMap.has(r.item_id)) oldMap.set(r.item_id, r.area + '-' + r.side);
 }
 
 const items = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'items.json'), 'utf8'));
@@ -58,13 +56,14 @@ for (const r of mapRows) {
 }
 
 const out = [];
+const SPECIAL_SET = new Set(['enchanted_book', 'potion', 'splash_potion', 'lingering_potion', 'tipped_arrow']);
 let added = 0, moved = 0, same = 0, special = 0;
 for (const item of obtainable) {
   const old = oldMap.get(item) || '';
   const rows = newMap.get(item) || [];
   const units = [...new Set(rows.map(r => r.area + '-' + r.side + ' ' + r.unit_id))];
   let change;
-  if (item === 'enchanted_book' || ['potion', 'splash_potion', 'lingering_potion', 'tipped_arrow'].includes(item)) {
+  if (SPECIAL_SET.has(item)) {
     change = '属性单元'; special++;
   } else if (!old) {
     change = '新增上架'; added++;
@@ -75,6 +74,8 @@ for (const item of obtainable) {
   }
   out.push({ item, cn: nameCn.get(item) || '', old, units: units.join(' | '), change });
 }
+// v3 移除物：v2 有收纳、v3 不再收录的物品
+const removedItems = [...oldMap.keys()].filter(i => !obtainable.includes(i) && !SPECIAL_SET.has(i));
 
 const header = ['item_id', '中文名', '旧区-侧', '新区-侧 单元', '变化'];
 const csv = [header, ...out.map(r => [r.item, r.cn, r.old, r.units, r.change])]
@@ -131,19 +132,19 @@ const potionUnits = [...unitMeta.entries()].filter(([, m]) => m.type === 'potion
 const md = [];
 md.push('# 改进物品清单');
 md.push('');
-md.push('日期：2026-11-20。按新位置分组；完整逐项含旧区/侧见 `改进物品清单.csv`。');
+md.push('日期：2026-11-22（v3）。基线 = 冻结 v2（`data/item_map-v2.csv`）；按新位置分组，完整逐项含旧区/侧见 `改进物品清单.csv`。');
 md.push('');
 md.push('## 汇总');
 md.push('');
 md.push('| 类型 | 数量 |');
 md.push('|---|---:|');
-md.push(`| 新增上架（旧 CSV 无此物品） | ${byChange['新增上架'] || 0} |`);
-md.push(`| 重新归位（旧区/侧变化） | ${byChange['重新归位'] || 0} |`);
+md.push(`| 新增上架（v2 无此物品） | ${byChange['新增上架'] || 0} |`);
+md.push(`| 重新归位（区/侧变化） | ${byChange['重新归位'] || 0} |`);
 md.push(`| 同区调整（同区/侧内换单元） | ${byChange['同区调整'] || 0} |`);
-md.push(`| 属性单元（附魔书/药水 5 类物品，展开 88 格） | ${byChange['属性单元'] || 0} |`);
+md.push(`| 属性单元（附魔书/药水 5 类物品，展开 84 格） | ${byChange['属性单元'] || 0} |`);
 md.push(`| 合计 | ${out.length} |`);
 md.push('');
-md.push('旧 partition.csv 唯一非空气物品 ' + oldMap.size + ' 项；本次可获取 ' + obtainable.length + ' 项。');
+md.push('v2 收纳物品 ' + oldMap.size + ' 项；v3 可获取 ' + obtainable.length + ' 项。');
 md.push('');
 md.push(section('1. 新增上架', out.filter(r => r.change === '新增上架')));
 md.push(section('2. 重新归位', out.filter(r => r.change === '重新归位'), true));
@@ -155,6 +156,12 @@ md.push(enchantUnits.map(([id, m]) => `${String(m.slot).padStart(2, '0')} ${m.cn
 md.push('');
 md.push(`### 药水（${potionUnits.length} 格）`);
 md.push(potionUnits.map(([id, m]) => `${String(m.slot).padStart(2, '0')} ${m.cn}`).join('、'));
+md.push('');
+md.push('## 5. 移除物');
+md.push('');
+md.push(removedItems.length
+  ? removedItems.map(i => `- ${nameCn.get(i) || i}（${i}）：不再收纳，分拣进入 trash。`).join('\n')
+  : '无。');
 md.push('');
 fs.writeFileSync(path.join(ROOT, 'docs', '改进物品清单.md'), md.join('\n'), 'utf8');
 

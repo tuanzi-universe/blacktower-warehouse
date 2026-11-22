@@ -270,7 +270,8 @@ body.data-open{overflow:hidden}
 <div class="toolbar">
   <div class="vsw" id="verSwitch" role="group" aria-label="版本切换">
     <button type="button" data-ver="v1" aria-pressed="false" title="冻结快照，只读对比">v1 · 冻结</button>
-    <button type="button" data-ver="v2" class="on" aria-pressed="true" title="当前工作版本，重新布局在 v2 进行">v2 · 当前</button>
+    <button type="button" data-ver="v2" aria-pressed="false" title="上一版工作版本（冻结），只读对比">v2 · 冻结</button>
+    <button type="button" data-ver="v3" class="on" aria-pressed="true" title="当前工作版本，重新布局在 v3 进行">v3 · 当前</button>
     <button type="button" data-ver="imported" aria-pressed="false" hidden title="导入视图（浏览器暂存，可删除）">导入</button>
   </div>
   <label class="chk" title="显示代表物材质"><input type="checkbox" id="showTex" checked> 显示材质</label>
@@ -279,7 +280,7 @@ body.data-open{overflow:hidden}
   <button class="ghost" id="reset">清除选择</button>
   <button class="ghost" id="searchBtn" disabled>搜索物品</button>
   <button class="ghost" id="dataBtn" disabled title="导入 / 导出点位数据">数据</button>
-  <a class="ghost" id="unmappedLink" href="未收录物品.html" target="_blank" rel="noopener">未收录物品 112</a>
+  <a class="ghost" id="unmappedLink" href="未收录物品.html" target="_blank" rel="noopener">未收录物品 113</a>
   <div class="hint" id="hint">滚轮缩放 · 拖动平移 · 悬停看单元 · 点击看变体</div>
 </div>
 <main>
@@ -325,7 +326,7 @@ body.data-open{overflow:hidden}
       <button class="data-action primary" id="exportXlsx">导出 Excel</button>
       <button class="data-action" id="exportJson">导出 JSON</button>
       <button class="data-action" id="importBtn">导入 Excel / JSON</button>
-      <button class="data-action" id="restoreDisk">重新读取 v2</button>
+      <button class="data-action" id="restoreDisk">重新读取 v3</button>
       <button class="data-action danger data-wide" id="deleteImported" hidden>删除导入视图</button>
     </div>
     <div class="data-note">导入生成独立的「导入」视图，不修改 v1/v2；删除视图只清浏览器暂存。导入视图导出为 <b>itemsorter-points-imported.json</b>，写入 bot 时改名替换 <b>config/itemsorter-points.json</b>。</div>
@@ -380,8 +381,8 @@ const deleteImportedBtn = document.getElementById('deleteImported');
 const toastEl = document.getElementById('toast');
 const verSwitch = document.getElementById('verSwitch');
 const verButtons = [...verSwitch.querySelectorAll('button[data-ver]')];
-const VER_FILES = {v1:'../data/points/itemsorter-points-v1.json', v2:'../data/points/itemsorter-points-v2.json', imported:'导入视图（浏览器暂存）'};
-const VER_NAMES = {v1:'v1 冻结快照', v2:'v2 工作版本', imported:'导入视图'};
+const VER_FILES = {v1:'../data/points/itemsorter-points-v1.json', v2:'../data/points/itemsorter-points-v2.json', v3:'../data/points/itemsorter-points-v3.json', imported:'导入视图（浏览器暂存）'};
+const VER_NAMES = {v1:'v1 冻结快照', v2:'v2 冻结快照', v3:'v3 工作版本', imported:'导入视图'};
 const phoneMQ = window.matchMedia('(max-width:860px),(max-height:520px) and (pointer:coarse)');
 const SHORT_MQ = window.matchMedia('(max-height:520px) and (pointer:coarse)');
 const CAN_HOVER = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
@@ -403,7 +404,9 @@ let units = [];
 let unitBySlot = new Map();
 let ruleCount = 0;
 let specialPoints = {};
-let currentVer = 'v2';
+let currentVer = 'v3';
+// 差异对比基线：v3 视图对比 v2，其余视图对比 v1
+function diffBaseVer() { return currentVer === 'v3' ? 'v2' : 'v1'; }
 function areaTheme(a) {
   const info = AREAS[a];
   if (!info) return '';
@@ -534,10 +537,11 @@ function diffUnits(base, next) {
 function recomputeDiff() {
   versionDiff = null;
   v1ByLabel = new Map();
-  if (!versionData.has('v1')) return;
-  const base = computeUnits(versionData.get('v1').items).units;
+  const baseVer = diffBaseVer();
+  if (!versionData.has(baseVer)) return;
+  const base = computeUnits(versionData.get(baseVer).items).units;
   v1ByLabel = new Map(base.map(u => [u.label, u]));
-  if (currentVer === 'v1') return;
+  if (currentVer === baseVer) return;
   const current = versionData.get(currentVer);
   if (!current || !Array.isArray(current.items)) return;
   const next = computeUnits(current.items).units;
@@ -548,12 +552,14 @@ function diffCount() {
   return versionDiff.moved.length + versionDiff.added.length + versionDiff.removed.length;
 }
 function diffSummaryText() {
-  if (currentVer === 'v1') return '基准版本';
-  if (!versionData.has('v1')) return 'v1 未加载';
-  if (!versionDiff) return '对比 v1 —';
+  const baseVer = diffBaseVer();
+  const baseTag = baseVer.toUpperCase();
+  if (currentVer === baseVer) return '基准版本';
+  if (!versionData.has(baseVer)) return `${baseTag} 未加载`;
+  if (!versionDiff) return `对比 ${baseTag} —`;
   const n = diffCount();
-  if (!n) return '与 v1 相同';
-  return `相对 v1：移动 ${versionDiff.moved.length} · 新增 ${versionDiff.added.length} · 移除 ${versionDiff.removed.length}`;
+  if (!n) return `与 ${baseTag} 相同`;
+  return `相对 ${baseTag}：移动 ${versionDiff.moved.length} · 新增 ${versionDiff.added.length} · 移除 ${versionDiff.removed.length}`;
 }
 
 function buildSearchIndex() {
@@ -695,7 +701,9 @@ function dataSourceText() {
     const m = importedView?.meta || {};
     return `导入视图 · ${m.fileName || '文件'}（${formatStamp(m.importedAt)}）`;
   }
-  return currentVer === 'v2' ? 'v2 · 磁盘 itemsorter-points-v2.json' : 'v1 · 磁盘 itemsorter-points-v1.json';
+  return currentVer === 'v3' ? 'v3 · 磁盘 itemsorter-points-v3.json'
+    : currentVer === 'v2' ? 'v2 · 磁盘 itemsorter-points-v2.json'
+    : 'v1 · 磁盘 itemsorter-points-v1.json';
 }
 function updateDataUI() {
   if (!dataSource) return;
@@ -712,7 +720,7 @@ function updateDataUI() {
   exportJsonBtn.disabled = busy || !IO || !loadedVer;
   importBtn.disabled = busy || !IO;
   restoreDiskBtn.disabled = busy || !loadedVer;
-  restoreDiskBtn.textContent = '重新读取 v2';
+  restoreDiskBtn.textContent = '重新读取 v3';
   deleteImportedBtn.hidden = !importedView;
   deleteImportedBtn.disabled = busy || !importedView;
   deleteImportedBtn.title = importedView
@@ -809,7 +817,7 @@ function exportExcel() {
   try {
     const wb = IO.buildWorkbook(data, currentMeta(), window.XLSX);
     const buf = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const tag = currentVer === 'v1' ? 'v1' : currentVer === IMPORTED_VER ? '导入' : 'v2';
+    const tag = currentVer === 'v1' ? 'v1' : currentVer === 'v2' ? 'v2' : currentVer === IMPORTED_VER ? '导入' : 'v3';
     const name = `仓库分区点位-${tag}.xlsx`;
     downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name);
     renderDataMessages({ message: `已导出 ${name}` });
@@ -833,8 +841,9 @@ function exportJson() {
   try {
     const text = IO.buildJson(data);
     const name = currentVer === 'v1' ? 'itemsorter-points-v1.json'
+      : currentVer === 'v2' ? 'itemsorter-points-v2.json'
       : currentVer === IMPORTED_VER ? 'itemsorter-points-imported.json'
-      : 'itemsorter-points.json';
+      : 'itemsorter-points-v3.json';
     downloadBlob(new Blob([text], { type: 'application/json;charset=utf-8' }), name);
     renderDataMessages({ message: `已导出 ${name}` });
     showToast(`已导出 ${name}`);
@@ -961,8 +970,8 @@ async function reloadDiskV2() {
   if (dataBusy) return;
   setDataBusy(true);
   try {
-    const ok = await loadVersion('v2', { keepView: true, disk: true });
-    if (ok) showToast('已读取磁盘 v2');
+    const ok = await loadVersion('v3', { keepView: true, disk: true });
+    if (ok) showToast('已读取磁盘 v3');
   } finally {
     setDataBusy(false);
   }
@@ -971,13 +980,13 @@ async function deleteImportedView() {
   if (dataBusy || !importedView) return;
   const m = importedView.meta || {};
   const label = m.fileName ? `「${m.fileName}」` : '';
-  if (!window.confirm(`删除导入视图${label}？只删除浏览器暂存，不影响 v1/v2 文件。`)) return;
+  if (!window.confirm(`删除导入视图${label}？只删除浏览器暂存，不影响 v1/v2/v3 文件。`)) return;
   setDataBusy(true);
   try {
     if (currentVer === IMPORTED_VER) {
-      const ok = await loadVersion('v2', { keepView: true });
+      const ok = await loadVersion('v3', { keepView: true });
       if (!ok) {
-        renderDataMessages({ message: '删除失败：无法读取磁盘 v2，导入视图已保留' });
+        renderDataMessages({ message: '删除失败：无法读取磁盘 v3，导入视图已保留' });
         return;
       }
     }
@@ -1478,16 +1487,18 @@ function renderSide() {
 function versionCardHTML() {
   const head = '<h3>版本</h3>';
   const viewName = VER_NAMES[currentVer] || currentVer;
+  const baseVer = diffBaseVer();
+  const baseTag = baseVer.toUpperCase();
   if (currentVer === 'v1') {
     return `${head}<div class="special">
       <div><b>当前视图</b> ${VER_NAMES.v1}（基准，只读对比）</div>
-      <div><b>其他视图</b> v2 工作版本${importedView ? '、导入视图' : ''}，顶部切换</div>
+      <div><b>其他视图</b> v2 / v3 工作版本${importedView ? '、导入视图' : ''}，顶部切换</div>
     </div>`;
   }
-  if (!versionData.has('v1')) {
+  if (!versionData.has(baseVer)) {
     return `${head}<div class="special">
       <div><b>当前视图</b> ${viewName}</div>
-      <div><b>对比 v1</b> 未加载 ${VER_FILES.v1}</div>
+      <div><b>对比 ${baseTag}</b> 未加载 ${VER_FILES[baseVer]}</div>
     </div>`;
   }
   const d = versionDiff || {moved: [], added: [], removed: []};
@@ -1495,21 +1506,23 @@ function versionCardHTML() {
   const rows = [
     ...d.moved.map(m => `<div class="vrow"><span class="v1">${m.u.label}</span><span class="v2">${unitSlotText(m.b)} → ${unitSlotText(m.u)}</span></div>`),
     ...d.added.map(u => `<div class="vrow"><span class="v1">${u.label}</span><span class="v2">新增 · ${unitSlotText(u)}</span></div>`),
-    ...d.removed.map(u => `<div class="vrow"><span class="v1">${u.label}</span><span class="v2">移除 · v1 ${unitSlotText(u)}</span></div>`),
+    ...d.removed.map(u => `<div class="vrow"><span class="v1">${u.label}</span><span class="v2">移除 · ${baseTag} ${unitSlotText(u)}</span></div>`),
   ];
   return `${head}
     <div class="special">
       <div><b>当前视图</b> ${viewName}</div>
-      <div><b>对比 v1</b> ${n ? `移动 ${d.moved.length} · 新增 ${d.added.length} · 移除 ${d.removed.length}` : '无差异'}</div>
+      <div><b>对比 ${baseTag}</b> ${n ? `移动 ${d.moved.length} · 新增 ${d.added.length} · 移除 ${d.removed.length}` : '无差异'}</div>
     </div>
     ${rows.length ? `<details class="vdiff"><summary>差异清单（${rows.length}）</summary><div class="vlist">${rows.join('')}</div></details>` : ''}`;
 }
 function v1MoveHTML(u) {
-  if (currentVer === 'v1' || !versionData.has('v1')) return '';
+  const baseVer = diffBaseVer();
+  if (currentVer === baseVer || !versionData.has(baseVer)) return '';
   const b = v1ByLabel.get(u.label);
-  if (!b) return '<div><b>v1 位置</b> 无（新增单元）</div>';
+  const tag = baseVer.toUpperCase();
+  if (!b) return `<div><b>${tag} 位置</b> 无（新增单元）</div>`;
   if (b.area === u.area && b.side === u.side && b.slot === u.slot) return '';
-  return `<div><b>v1 位置</b> ${unitSlotText(b)}</div>`;
+  return `<div><b>${tag} 位置</b> ${unitSlotText(b)}</div>`;
 }
 function renderOverview() {
   const occupied = units.filter(u => u.slot).length;
@@ -1628,7 +1641,7 @@ function updateVerButtons() {
   }
 }
 function updateSub() {
-  const tag = currentVer === 'v1' ? 'v1 · 冻结' : currentVer === IMPORTED_VER ? '导入 · 临时' : 'v2 · 当前';
+  const tag = currentVer === 'v1' ? 'v1 · 冻结' : currentVer === 'v2' ? 'v2 · 冻结' : currentVer === IMPORTED_VER ? '导入 · 临时' : 'v3 · 当前';
   const diff = currentVer === 'v1' ? '' : ` · ${diffSummaryText()}`;
   document.getElementById('sub').textContent =
     `${tag} · ${units.length} 个存储单元 · ${ruleCount} 条规则${diff} · 880 格（8 区 × 2 侧 × 55）`;
@@ -1662,6 +1675,10 @@ async function fetchVersion(ver, opts = {}) {
 async function ensureV1() {
   if (versionData.has('v1')) return;
   try { await fetchVersion('v1'); } catch (_) { /* v1 缺失时仅关闭对比 */ }
+}
+async function ensureV2() {
+  if (versionData.has('v2')) return;
+  try { await fetchVersion('v2'); } catch (_) { /* v2 缺失时仅关闭对比 */ }
 }
 function applyPointsData(data, opts = {}) {
   const prevSel = opts.prevSel !== undefined ? opts.prevSel : (selectedUnit ? selectedUnit.label : null);
@@ -1703,7 +1720,8 @@ async function loadVersion(ver, opts = {}) {
   const prevArea = selectedArea;
   const keepView = opts.keepView !== false && loadedVer !== null;
   try {
-    const data = await fetchVersion(ver, {force: ver === 'v2', disk: !!opts.disk});
+    const data = await fetchVersion(ver, {force: ver === 'v3', disk: !!opts.disk});
+    if (ver === 'v3') await ensureV2();
     if (ver === 'v2' || ver === IMPORTED_VER) await ensureV1();
     currentVer = ver;
     loadedVer = ver;
@@ -1732,7 +1750,7 @@ verSwitch.addEventListener('click', e => {
   loadVersion(ver, {keepView: true});
 });
 loadCachedImport();
-loadVersion('v2', {keepView: false});
+loadVersion('v3', {keepView: false});
 </script>
 </body>
 </html>

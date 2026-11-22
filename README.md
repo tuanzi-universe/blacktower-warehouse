@@ -1,13 +1,13 @@
 # 仓库分区
 
-黑塔仓库的物品分类分区方案：8 区冷热布局（581 存储单元 / 1830 条规则），由 `tools/build.js` 从规则定义生成点位 JSON 与审计 CSV，并附带 2D 平面图查看器。
+黑塔仓库的物品分类分区方案：8 区冷热布局（626 存储单元 / 1829 条规则），由 `tools/build.js` 从规则定义生成点位 JSON 与审计 CSV，并附带 2D 平面图查看器。
 
 ## 目录结构
 
 ```
 warehouse-partition/
 ├── viewer/                    # 交付物：浏览器打开
-│   ├── index.html             # 2D 平面图（v1/v2 切换、差异、搜索、导入导出）
+│   ├── index.html             # 2D 平面图（v1/v2/v3 切换、差异、搜索、导入导出）
 │   ├── unmapped.html          # 未收录物品报告
 │   └── assets/                # 查看器静态资源（贴图 tex/、points-io.js、xlsx）
 ├── data/
@@ -16,12 +16,15 @@ warehouse-partition/
 │   ├── effects.json           # 输入：药水效果
 │   ├── partition.csv          # 输入：旧版布局基准
 │   ├── partition_new.csv      # 输出：880 行全量布局
-│   ├── storage_units.csv      # 输出：581 个存储单元
-│   ├── item_map.csv           # 输出：1830 行逐物品映射
+│   ├── storage_units.csv      # 输出：626 个存储单元
+│   ├── storage_units-v2.csv   # v2 冻结基准（报告对比用）
+│   ├── item_map.csv           # 输出：1829 行逐物品映射
+│   ├── item_map-v2.csv        # v2 冻结基准（报告对比用）
 │   └── points/
 │       ├── itemsorter-points-v1.json    # 冻结基准（只读）
-│       ├── itemsorter-points-v2.json    # 工作版本（主交付物）
-│       └── itemsorter-points.json       # bot 兼容副本，与 v2 同步
+│       ├── itemsorter-points-v2.json    # 上一轮快照（v3 差异基线）
+│       ├── itemsorter-points-v3.json    # 工作版本（主交付物）
+│       └── itemsorter-points.json       # bot 兼容副本，与 v3 同步
 ├── docs/
 │   ├── 分区方案.md             # 主方案：分区表、归位规则、验证
 │   ├── itemsorter-points-spec.md        # 点位 JSON 格式规范
@@ -60,7 +63,7 @@ python -m http.server 8000
 
 | 命令 | 作用 |
 |---|---|
-| `node tools/build.js` | 生成点位 JSON（v2 + bot 副本）与三个审计 CSV |
+| `node tools/build.js` | 生成点位 JSON（v3 + bot 副本）与三个审计 CSV |
 | `node tools/build-html.js` | 重新生成 `viewer/index.html` |
 | `node tools/validate.js` | 覆盖率、点位、每侧单元数校验 |
 | `node tools/validate-coldhot.js` | 冷热归属、重组、顺序校验 |
@@ -83,7 +86,8 @@ python -m http.server 8000
 点位版本：
 
 - `data/points/itemsorter-points-v1.json`：冻结基准，build 不覆盖，只用于对比。
-- `data/points/itemsorter-points-v2.json`：工作版本，重新布局的唯一目标。
-- `data/points/itemsorter-points.json`：每次 build 与 v2 同步的 bot 兼容副本。
+- `data/points/itemsorter-points-v2.json`：上一轮快照（冻结），v3 的差异对比基线。
+- `data/points/itemsorter-points-v3.json`：工作版本，重新布局的唯一目标。
+- `data/points/itemsorter-points.json`：每次 build 与 v3 同步的 bot 兼容副本。
 
 启用到 bot：复制 `data/points/itemsorter-points.json` 到 `../warehouse-bot/config/` 并重启 bot。
