@@ -56,9 +56,20 @@ jobs:
         with:
           enablement: true
 
-      - uses: actions/upload-pages-artifact@v3
+      # 显式打包并上传 v4 产物：upload-pages-artifact@v3 的内部上传与
+      # deploy-pages@v4 的产物检索存在兼容问题（偶发 No artifacts named
+      # "github-pages" were found），按 actions/deploy-pages 官方文档改用
+      # upload-artifact@v4 上传名为 github-pages 的 artifact.tar。
+      - name: Package site
+        run: tar --dereference --hard-dereference --directory site -cvf "$RUNNER_TEMP/artifact.tar" .
+
+      - name: Upload Pages artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: site
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
 
       - id: deployment
         uses: actions/deploy-pages@v4
