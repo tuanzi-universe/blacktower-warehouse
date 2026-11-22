@@ -1,6 +1,6 @@
 # 仓库分区
 
-黑塔仓库的物品分类分区方案：8 区冷热布局（624 存储单元 / 1829 条规则），由 `tools/build.js` 从规则定义生成点位 JSON 与审计 CSV，并附带 2D 平面图查看器。
+黑塔仓库的物品分类分区方案：8 区冷热布局（623 存储单元 / 1822 条规则），由 `tools/build.js` 从规则定义生成点位 JSON 与审计 CSV，并附带 2D 平面图查看器。
 
 ## 目录结构
 
@@ -16,9 +16,9 @@ warehouse-partition/
 │   ├── effects.json           # 输入：药水效果
 │   ├── partition.csv          # 输入：旧版布局基准
 │   ├── partition_new.csv      # 输出：880 行全量布局
-│   ├── storage_units.csv      # 输出：624 个存储单元
+│   ├── storage_units.csv      # 输出：623 个存储单元
 │   ├── storage_units-v2.csv   # v2 冻结基准（报告对比用）
-│   ├── item_map.csv           # 输出：1829 行逐物品映射
+│   ├── item_map.csv           # 输出：1822 行逐物品映射
 │   ├── item_map-v2.csv        # v2 冻结基准（报告对比用）
 │   └── points/
 │       ├── itemsorter-points-v1.json    # 冻结基准（只读）

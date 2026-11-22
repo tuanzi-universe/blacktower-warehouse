@@ -650,7 +650,7 @@ const hLBase = [
 ];
 const variantChestIds = [
   'BUILD:v_tile', 'BUILD:v_stairs', 'BUILD:v_slab', 'BUILD:v_chiseled', 'BUILD:v_cut',
-  'BUILD:v_smooth', 'BUILD:v_cracked', 'BUILD:v_pillar', 'BUILD:v_infested', 'BUILD:v_brick',
+  'BUILD:v_smooth', 'BUILD:v_cracked', 'BUILD:v_pillar', 'BUILD:v_brick',
 ];
 const variantChests = variantChestIds.map(byId);
 const variantUnits = ['BUILD:wall', 'BUILD:fence', 'BUILD:fence_gate'].map(byId);
@@ -743,12 +743,12 @@ const counts = [
   ['G-R', gR.length, 44],
   ['地形拆单', hlSplit.length, 51],
   ['磨制融入', polishedIds.length, 10],
-  ['变体组', variantChests.length, 10],
+  ['变体组', variantChests.length, 9],
   ['墙/栅栏/栅栏门', variantUnits.length, 3],
   ['船/门/活板门', byId('WOODWORK:boat_door').items.length, 48],
   ['告示牌', byId('BUILD:v_sign').items.length, 26],
   ['展示架', byId('BUILD:v_shelf').items.length, 13],
-  ['H-L', hL.length, 51],
+  ['H-L', hL.length, 50],
   ['H-R', hR.length, 54],
 ];
 for (const [name, got, want] of counts) {
@@ -780,7 +780,7 @@ const SIDE_ORDER = ['A-L', 'A-R', 'B-L', 'B-R', 'C-L', 'C-R', 'D-L', 'D-R', 'E-L
 const expectLen = {
   'A-L': 32, 'A-R': 27, 'B-L': 48, 'B-R': 53, 'C-L': 21, 'C-R': 27,
   'D-L': 44, 'D-R': 54, 'E-L': 21, 'E-R': 20, 'F-L': 44, 'F-R': 33,
-  'G-L': 51, 'G-R': 44, 'H-L': 51, 'H-R': 54,
+  'G-L': 51, 'G-R': 44, 'H-L': 50, 'H-R': 54,
 };
 const globalSeen = new Set();
 for (const key of SIDE_ORDER) {
@@ -799,7 +799,7 @@ for (const key of SIDE_ORDER) {
 for (const u of unitInstances) {
   if (!globalSeen.has(u.id)) throw new Error(`源单元未分配 ${u.id}`);
 }
-if (globalSeen.size !== 624) throw new Error(`分配单元 ${globalSeen.size}，应为 624`);
+if (globalSeen.size !== 623) throw new Error(`分配单元 ${globalSeen.size}，应为 623`);
 unitInstances = SIDE_ORDER.flatMap(key => bySide.get(key));
 
 const placed = new Map();

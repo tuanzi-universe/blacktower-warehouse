@@ -13,6 +13,10 @@ const EXCLUDED = new Set([
   'petrified_oak_slab', 'trial_spawner', 'vault',
   'dirt_path', 'farmland',
   'chorus_plant', // v3 移除收纳：见《本次改进》移除物报告
+  // 蛀蚀类方块：生存模式无法获取，v3 移除收纳（见移除物报告）
+  'infested_stone', 'infested_cobblestone', 'infested_stone_bricks',
+  'infested_chiseled_stone_bricks', 'infested_cracked_stone_bricks',
+  'infested_mossy_stone_bricks', 'infested_deepslate',
   'test_block', 'test_instance_block',
   'command_block', 'chain_command_block', 'repeating_command_block',
   'command_block_minecart',
@@ -565,7 +569,6 @@ pattern('BUILD:v_cut', 'H', 'L', '建材变体', '切制', 'cut_sandstone', /^cu
 pattern('BUILD:v_smooth', 'H', 'L', '建材变体', '平滑', 'smooth_stone', /^smooth_/);
 pattern('BUILD:v_cracked', 'H', 'L', '建材变体', '裂纹', 'cracked_stone_bricks', /^cracked_/);
 pattern('BUILD:v_pillar', 'H', 'L', '建材变体', '柱', 'quartz_pillar', /_pillar$/);
-pattern('BUILD:v_infested', 'H', 'L', '建材变体', '蛀蚀', 'infested_stone', /^infested_/);
 pattern('BUILD:v_brick', 'H', 'L', '建材变体', '砖', 'stone_bricks', /_bricks?$/, ['mossy_stone_bricks', 'bamboo_mosaic']);
 // 告示牌/展示架：原按树种的收纳删除，统一进通用格。
 pattern('BUILD:v_sign', 'H', 'R', '木构件', '告示牌（含悬挂式）', 'oak_sign', /_sign$/);

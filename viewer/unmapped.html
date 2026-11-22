@@ -48,7 +48,7 @@ footer{max-width:1100px;margin:0 auto;padding:0 28px 30px;color:#9a9488;font-siz
   <div class="top">
     <div>
       <h1>未收录物品报告</h1>
-      <div class="sub">items.json 1658 项 · 已收录 1545 项 · 未收录 113 项 · 覆盖率 93.2%</div>
+      <div class="sub">items.json 1658 项 · 已收录 1538 项 · 未收录 120 项 · 覆盖率 92.8%</div>
     </div>
     <a class="back" href="partition-2d.html">← 返回点位图</a>
   </div>
@@ -56,19 +56,19 @@ footer{max-width:1100px;margin:0 auto;padding:0 28px 30px;color:#9a9488;font-siz
 <main>
   <div class="kpis">
     <div class="kpi"><b>1658</b><span>items.json 总条目</span></div>
-    <div class="kpi"><b>1545</b><span>已收录到点位</span></div>
-    <div class="kpi"><b>113</b><span>未收录</span></div>
-    <div class="kpi"><b>93.2%</b><span>条目覆盖率</span></div>
+    <div class="kpi"><b>1538</b><span>已收录到点位</span></div>
+    <div class="kpi"><b>120</b><span>未收录</span></div>
+    <div class="kpi"><b>92.8%</b><span>条目覆盖率</span></div>
   </div>
   <div class="note">
-    <b>结论：</b>当前点位已收录 1545 项；未收录的 113 项中，刷怪笼为按要求移除，其余为生存模式无法正常获取的物品，不是遗漏。<br>
+    <b>结论：</b>当前点位已收录 1538 项；未收录的 120 项中，刷怪笼为按要求移除，其余为生存模式无法正常获取的物品，不是遗漏。<br>
     这些物品不会命中任何点位规则，机器人遇到时会按未映射物品投入 <b>trash</b>。若服务器通过活动/商店发放，需要另行开单元。<br>
     <b>说明：</b>本报告按 <code>items.json</code> 与当前 <code>item_map.csv</code> 对比生成；<code>potted_*</code>、<code>*_wall_fan</code>、<code>twisted_vines_plant</code> 不在 items.json，未统计。
   </div>
   <div class="toolbar">
     <input id="q" type="search" placeholder="搜索中文名 / 物品 ID…" autocomplete="off">
-    <button class="chip on" data-cat="all" style="--c:#111">全部<b>113</b></button>
-    <button class="chip" data-cat="spawn_egg" style="--c:#b45aa8">刷怪蛋<b>88</b></button><button class="chip" data-cat="command" style="--c:#c94a4a">命令方块<b>4</b></button><button class="chip" data-cat="creative" style="--c:#75808f">创造/结构方块<b>5</b></button><button class="chip" data-cat="unobtainable" style="--c:#8b6f4e">不可获取方块<b>7</b></button><button class="chip" data-cat="trial" style="--c:#c98a1f">试炼/宝库<b>2</b></button><button class="chip" data-cat="test" style="--c:#3f74b8">测试方块<b>2</b></button><button class="chip" data-cat="removed" style="--c:#7c6f64">按要求移除<b>1</b></button><button class="chip" data-cat="special" style="--c:#4f8f5a">特殊物品<b>3</b></button><button class="chip" data-cat="air" style="--c:#9ca3af">空气<b>1</b></button>
+    <button class="chip on" data-cat="all" style="--c:#111">全部<b>120</b></button>
+    <button class="chip" data-cat="spawn_egg" style="--c:#b45aa8">刷怪蛋<b>88</b></button><button class="chip" data-cat="command" style="--c:#c94a4a">命令方块<b>4</b></button><button class="chip" data-cat="creative" style="--c:#75808f">创造/结构方块<b>5</b></button><button class="chip" data-cat="unobtainable" style="--c:#8b6f4e">不可获取方块<b>7</b></button><button class="chip" data-cat="trial" style="--c:#c98a1f">试炼/宝库<b>2</b></button><button class="chip" data-cat="test" style="--c:#3f74b8">测试方块<b>2</b></button><button class="chip" data-cat="removed" style="--c:#7c6f64">按要求移除<b>1</b></button><button class="chip" data-cat="special" style="--c:#4f8f5a">特殊物品<b>10</b></button><button class="chip" data-cat="air" style="--c:#9ca3af">空气<b>1</b></button>
   </div>
   <div class="list" id="list"><div class="row" data-cat="spawn_egg" data-id="ocelot_spawn_egg" data-cn="豹猫刷怪蛋">
   <span class="badge" style="--c:#b45aa8">刷怪蛋</span>
@@ -615,6 +615,41 @@ footer{max-width:1100px;margin:0 auto;padding:0 28px 30px;color:#9a9488;font-siz
   <span class="cn">刷怪笼</span>
   <code>spawner</code>
   <span class="why">按需求从仓库点位移除，机器人按未映射投入 trash</span>
+</div><div class="row" data-cat="special" data-id="infested_chiseled_stone_bricks" data-cn="虫蚀雕纹石砖">
+  <span class="badge" style="--c:#4f8f5a">特殊物品</span>
+  <span class="cn">虫蚀雕纹石砖</span>
+  <code>infested_chiseled_stone_bricks</code>
+  <span class="why">仅命令/调试获取</span>
+</div><div class="row" data-cat="special" data-id="infested_cracked_stone_bricks" data-cn="虫蚀裂纹石砖">
+  <span class="badge" style="--c:#4f8f5a">特殊物品</span>
+  <span class="cn">虫蚀裂纹石砖</span>
+  <code>infested_cracked_stone_bricks</code>
+  <span class="why">仅命令/调试获取</span>
+</div><div class="row" data-cat="special" data-id="infested_deepslate" data-cn="虫蚀深板岩">
+  <span class="badge" style="--c:#4f8f5a">特殊物品</span>
+  <span class="cn">虫蚀深板岩</span>
+  <code>infested_deepslate</code>
+  <span class="why">仅命令/调试获取</span>
+</div><div class="row" data-cat="special" data-id="infested_stone" data-cn="虫蚀石头">
+  <span class="badge" style="--c:#4f8f5a">特殊物品</span>
+  <span class="cn">虫蚀石头</span>
+  <code>infested_stone</code>
+  <span class="why">仅命令/调试获取</span>
+</div><div class="row" data-cat="special" data-id="infested_stone_bricks" data-cn="虫蚀石砖">
+  <span class="badge" style="--c:#4f8f5a">特殊物品</span>
+  <span class="cn">虫蚀石砖</span>
+  <code>infested_stone_bricks</code>
+  <span class="why">仅命令/调试获取</span>
+</div><div class="row" data-cat="special" data-id="infested_mossy_stone_bricks" data-cn="虫蚀苔石砖">
+  <span class="badge" style="--c:#4f8f5a">特殊物品</span>
+  <span class="cn">虫蚀苔石砖</span>
+  <code>infested_mossy_stone_bricks</code>
+  <span class="why">仅命令/调试获取</span>
+</div><div class="row" data-cat="special" data-id="infested_cobblestone" data-cn="虫蚀圆石">
+  <span class="badge" style="--c:#4f8f5a">特殊物品</span>
+  <span class="cn">虫蚀圆石</span>
+  <code>infested_cobblestone</code>
+  <span class="why">仅命令/调试获取</span>
 </div><div class="row" data-cat="special" data-id="debug_stick" data-cn="调试棒">
   <span class="badge" style="--c:#4f8f5a">特殊物品</span>
   <span class="cn">调试棒</span>

@@ -634,13 +634,6 @@ horn_coral_fan,鹿角珊瑚扇,F-R,F-R PLANT:coral:horn,同区调整
 host_armor_trim_smithing_template,锻造模板,D-R,D-R COLLECT:smithing_template,同区调整
 howl_pottery_sherd,狼嚎纹样陶片,G-R,D-R COLLECT:sherd,重新归位
 ice,冰,E-L,H-L TERRAIN:ice:ice,重新归位
-infested_chiseled_stone_bricks,虫蚀雕纹石砖,H-L,H-L BUILD:v_infested,同区调整
-infested_cobblestone,虫蚀圆石,H-L,H-L BUILD:v_infested,同区调整
-infested_cracked_stone_bricks,虫蚀裂纹石砖,H-L,H-L BUILD:v_infested,同区调整
-infested_deepslate,虫蚀深板岩,H-L,H-L BUILD:v_infested,同区调整
-infested_mossy_stone_bricks,虫蚀苔石砖,H-L,H-L BUILD:v_infested,同区调整
-infested_stone,虫蚀石头,H-L,H-L BUILD:v_infested,同区调整
-infested_stone_bricks,虫蚀石砖,H-L,H-L BUILD:v_infested,同区调整
 ink_sac,墨囊,G-R,G-L DROP:ink,重新归位
 iron_axe,铁斧,D-R,D-R TOOL:axe,同区调整
 iron_bars,铁栏杆,H-R,H-R BUILD:iron,同区调整

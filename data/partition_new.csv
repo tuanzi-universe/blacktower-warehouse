@@ -815,11 +815,11 @@ H,L,43,BUILD:v_cut,item,建材变体,切制,BUILD:v_cut,cut_sandstone,2,5157,107
 H,L,44,BUILD:v_smooth,item,建材变体,平滑,BUILD:v_smooth,smooth_stone,4,5156,107,-37742,5156.5,115,-37740.5,180,0
 H,L,45,BUILD:v_cracked,item,建材变体,裂纹,BUILD:v_cracked,cracked_stone_bricks,4,5155,107,-37742,5155.5,115,-37740.5,0,0
 H,L,46,BUILD:v_pillar,item,建材变体,柱,BUILD:v_pillar,quartz_pillar,2,5154,107,-37742,5154.5,115,-37740.5,180,0
-H,L,47,BUILD:v_infested,item,建材变体,蛀蚀,BUILD:v_infested,infested_stone,7,5153,107,-37742,5153.5,115,-37740.5,0,0
-H,L,48,BUILD:v_brick,item,建材变体,砖,BUILD:v_brick,stone_bricks,13,5152,107,-37742,5152.5,115,-37740.5,180,0
-H,L,49,BUILD:wall,item,建材变体,墙,BUILD:wall,stone_brick_wall,32,5151,107,-37742,5151.5,115,-37740.5,0,0
-H,L,50,BUILD:fence,item,建材变体,栅栏,BUILD:fence,oak_fence,14,5150,107,-37742,5150.5,115,-37740.5,180,0
-H,L,51,BUILD:fence_gate,item,建材变体,栅栏门,BUILD:fence_gate,oak_fence_gate,13,5149,107,-37742,5149.5,115,-37740.5,0,0
+H,L,47,BUILD:v_brick,item,建材变体,砖,BUILD:v_brick,stone_bricks,13,5153,107,-37742,5153.5,115,-37740.5,0,0
+H,L,48,BUILD:wall,item,建材变体,墙,BUILD:wall,stone_brick_wall,32,5152,107,-37742,5152.5,115,-37740.5,180,0
+H,L,49,BUILD:fence,item,建材变体,栅栏,BUILD:fence,oak_fence,14,5151,107,-37742,5151.5,115,-37740.5,0,0
+H,L,50,BUILD:fence_gate,item,建材变体,栅栏门,BUILD:fence_gate,oak_fence_gate,13,5150,107,-37742,5150.5,115,-37740.5,180,0
+H,L,51,,,,,,,,5149,107,-37742,5149.5,115,-37740.5,0,0
 H,L,52,,,,,,,,5148,107,-37742,5148.5,115,-37740.5,180,0
 H,L,53,,,,,,,,5147,107,-37742,5147.5,115,-37740.5,0,0
 H,L,54,,,,,,,,5146,107,-37742,5146.5,115,-37740.5,180,0

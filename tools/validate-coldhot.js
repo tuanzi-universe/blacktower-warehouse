@@ -127,7 +127,7 @@ function labelsOfV3(area, side) {
 const expectSide = {
   'A-L': 32, 'A-R': 27, 'B-L': 48, 'B-R': 53, 'C-L': 21, 'C-R': 27,
   'D-L': 44, 'D-R': 54, 'E-L': 21, 'E-R': 20, 'F-L': 44, 'F-R': 33,
-  'G-L': 51, 'G-R': 44, 'H-L': 51, 'H-R': 54,
+  'G-L': 51, 'G-R': 44, 'H-L': 50, 'H-R': 54,
 };
 const sideCount = {};
 for (const u of units) {
@@ -137,13 +137,13 @@ for (const u of units) {
 for (const [k, n] of Object.entries(expectSide)) {
   assert((sideCount[k] || 0) === n, `${k} 单元 ${sideCount[k] || 0}，应为 ${n}`);
 }
-assert(units.length === 624, `单元总数 ${units.length}，应为 624`);
-assert(units.filter(u => u.type === 'item').length === 540, `物品单元 ${units.filter(u => u.type === 'item').length}，应为 540`);
+assert(units.length === 623, `单元总数 ${units.length}，应为 623`);
+assert(units.filter(u => u.type === 'item').length === 539, `物品单元 ${units.filter(u => u.type === 'item').length}，应为 539`);
 assert(units.filter(u => u.type === 'enchant').length === 44, '附魔单元应为 44');
 assert(units.filter(u => u.type === 'potion').length === 40, '药水单元应为 40');
 const slotRows = readCsv('data/partition_new.csv');
 assert(slotRows.length === 880, `partition_new 行数 ${slotRows.length}，应为 880`);
-assert(slotRows.filter(r => r.unit_id).length === 624, 'partition_new 占用格应为 624');
+assert(slotRows.filter(r => r.unit_id).length === 623, 'partition_new 占用格应为 623');
 // v2 冻结文件完整性
 assert(v2fUnits.length === 581, `冻结 v2 单元 ${v2fUnits.length}，应为 581`);
 assert(v1Units.length === 575, `冻结 v1 单元 ${v1Units.length}，应为 575`);
@@ -157,7 +157,7 @@ const auxUnits = units.filter(u => !hotUnits.includes(u) && ['A', 'C', 'E', 'G']
 const coldAreaUnits = units.filter(u => ['B', 'D', 'F', 'H'].includes(u.area));
 assert(hotUnits.length === 189, `热单元 ${hotUnits.length}，应为 189（矿物 32 + 红石 21 + 药水 41 + G 95）`);
 assert(auxUnits.length === 54, `热区附属单元 ${auxUnits.length}，应为 54（A-R 27 + C-R 27，含船/门/活板门）`);
-assert(coldAreaUnits.length === 381, `冷区 B/D/F/H 单元 ${coldAreaUnits.length}，应为 381`);
+assert(coldAreaUnits.length === 380, `冷区 B/D/F/H 单元 ${coldAreaUnits.length}，应为 380`);
 assert(hotUnits.filter(u => u.id.startsWith('MIN:')).length === 32, '矿物热单元应为 32');
 assert(hotUnits.filter(u => u.id.startsWith('RED:')).length === 21, '红石热单元应为 21');
 assert(hotUnits.filter(u => u.type === 'potion').length === 40, '热区药水单元应为 40');
@@ -191,10 +191,10 @@ const expectedHL = [
   '雪（含雪球）', '雪块', '冰', '浮冰', '蓝冰', '海绵（含湿海绵）',
   '红砖块', '红砖', '压实泥', '砂岩', '红砂岩', '下界砖块', '下界砖', '红色下界砖块',
   '海晶石', '暗海晶石', '紫珀块', '树脂块', '树脂', '镶金黑石',
-  '瓦', '楼梯', '台阶', '雕纹', '切制', '平滑', '裂纹', '柱', '蛀蚀', '砖',
+  '瓦', '楼梯', '台阶', '雕纹', '切制', '平滑', '裂纹', '柱', '砖',
   '墙', '栅栏', '栅栏门',
 ];
-assert(expectedHL.length === 51, `H-L 序列 ${expectedHL.length}，应为 51`);
+assert(expectedHL.length === 50, `H-L 序列 ${expectedHL.length}，应为 50`);
 {
   const actual = labelsOfV3('H', 'L');
   const d = diffSet(expectedHL, actual);
@@ -324,7 +324,7 @@ const anchors = [
   ['H-L', 25, '红砖块'], ['H-L', 26, '红砖'], ['H-L', 30, '下界砖块'], ['H-L', 31, '下界砖'],
   ['H-L', 36, '树脂块'], ['H-L', 37, '树脂'], ['H-L', 38, '镶金黑石'],
   ['H-L', 39, '瓦'], ['H-L', 40, '楼梯'], ['H-L', 41, '台阶'],
-  ['H-L', 48, '砖'], ['H-L', 49, '墙'], ['H-L', 51, '栅栏门'],
+  ['H-L', 47, '砖'], ['H-L', 48, '墙'], ['H-L', 50, '栅栏门'],
   ['H-R', 2, '圆石'], ['H-R', 3, '平滑石头'], ['H-R', 4, '苔石'],
   // H-R 尾段：床/旗帜/旗帜图案/蜡烛/坐垫 自 B 迁入
   ['H-R', 50, '床'], ['H-R', 51, '旗帜'], ['H-R', 52, '旗帜图案'],
