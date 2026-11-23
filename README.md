@@ -7,7 +7,7 @@
 ```
 warehouse-partition/
 ├── viewer/                    # 交付物：浏览器打开
-│   ├── index.html             # 2D 平面图（v1/v2/v3 切换、差异、搜索、导入导出）
+│   ├── index.html             # 2D 平面图（v1/v2/v3 切换、差异、搜索、导入导出、黑名单编辑）
 │   ├── unmapped.html          # 未收录物品报告
 │   └── assets/                # 查看器静态资源（贴图 tex/、points-io.js、xlsx）
 ├── data/
@@ -57,6 +57,8 @@ python -m http.server 8000
 
 打开 `http://localhost:8000/viewer/index.html`。
 
+「数据」弹窗可导出/导入 Excel/JSON 并编辑当前视图的黑名单；v1/v2/v3 未提供 blacklist 时默认 `minecraft:wooden_hoe`。
+
 ## 常用命令
 
 均在项目根目录执行：
@@ -65,12 +67,12 @@ python -m http.server 8000
 |---|---|
 | `node tools/build.js` | 生成点位 JSON（v3 + bot 副本）与三个审计 CSV |
 | `node tools/build-html.js` | 重新生成 `viewer/index.html` |
-| `node tools/validate.js` | 覆盖率、点位、每侧单元数校验 |
+| `node tools/validate.js` | 覆盖率、点位、每侧单元数、黑名单校验 |
 | `node tools/validate-coldhot.js` | 冷热归属、重组、顺序校验 |
 | `node tools/report-merged.js` | 生成 `docs/合并编组报告` |
 | `node tools/report-unmapped.js` | 生成 `viewer/unmapped.html` |
 | `node tools/diff-items.js` | 生成 `docs/改进物品清单` |
-| `node tools/test-points-io.js` | points-io 45 项回导测试 |
+| `node tools/test-points-io.js` | points-io 81 项回导/黑名单测试 |
 
 `validate-load.ts` / `validate-match.ts` 依赖 warehouse-bot 源码，在 bot 目录下运行：
 `npx tsx ../warehouse-partition/tools/validate-load.ts`。

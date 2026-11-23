@@ -229,6 +229,34 @@ body.data-open{overflow:hidden}
 .data-close:hover{background:#faf8f3}
 .data-source{font-size:12px;color:#6b7280;word-break:break-all}
 .data-stats{font-size:12px;color:#4b5563}
+.data-blacklist{border:1px solid #eee8dd;border-radius:10px;padding:10px;background:#fcfbf8}
+.bl-head{display:flex;align-items:center;gap:8px}
+.bl-title{font-weight:600;font-size:13px}
+.bl-count{font-size:11.5px;color:#8b857a}
+.bl-edit{margin-left:auto;border:1px solid #d8d3c8;background:#fff;border-radius:7px;padding:3px 9px;font:inherit;font-size:11.5px;color:#4b5563;cursor:pointer}
+.bl-edit:hover{background:#faf8f3}
+.bl-edit:disabled{opacity:.45;cursor:default}
+.bl-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.bl-item{max-width:100%}
+.bl-tag{display:inline-block;background:#f1ece2;border-radius:999px;padding:2px 8px;font-size:11.5px;color:#4b5563;line-height:1.5;word-break:break-all}
+.bl-empty{color:#9a9488;font-size:12px;padding:2px 0}
+.bl-editor{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.bl-editor[hidden]{display:none}
+#blacklistInput{width:100%;min-height:92px;resize:vertical;border:1px solid #d8d3c8;border-radius:8px;padding:8px 10px;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;background:#fff;color:#1e242b;outline:none}
+#blacklistInput:focus{border-color:#9ca3af;box-shadow:0 0 0 3px rgba(156,163,175,.12)}
+.bl-help{font-size:11.5px;color:#8b857a;line-height:1.55}
+.bl-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.bl-error{font-size:12px;color:#8a1c1c;line-height:1.55;white-space:pre-wrap}
+.bl-overview .bl-tag{white-space:normal}
+.bl-inline-edit{margin-top:7px;border:1px solid #d8d3c8;background:#fff;border-radius:7px;padding:4px 10px;font:inherit;font-size:11.5px;color:#4b5563;cursor:pointer}
+.bl-inline-edit:hover{background:#faf8f3}
+.bl-note{font-size:11.5px;color:#8b857a;line-height:1.5;margin-top:6px}
+aside h3 .bl-count{text-transform:none;letter-spacing:0;font-weight:400;font-size:10.5px;color:#8b857a}
+.vsw button.dirty::after{content:"*";color:#b45309;margin-left:2px;font-weight:700}
+@media (max-width:860px), (max-height:520px) and (pointer:coarse){
+  .bl-actions{grid-template-columns:1fr}
+  #blacklistInput{min-height:120px}
+}
 .data-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .data-action{border:1px solid #d8d3c8;background:#fff;border-radius:9px;padding:10px 12px;font:inherit;font-size:13px;color:#374151;cursor:pointer;text-align:center}
 .data-action:hover{background:#faf8f3}
@@ -322,6 +350,24 @@ body.data-open{overflow:hidden}
     </div>
     <div class="data-source" id="dataSource"></div>
     <div class="data-stats" id="dataStats"></div>
+    <div class="data-blacklist">
+      <div class="bl-head">
+        <span class="bl-title">黑名单</span>
+        <span class="bl-count" id="blacklistCount"></span>
+        <button class="bl-edit" id="editBlacklist">编辑</button>
+      </div>
+      <div class="bl-list" id="blacklistList"></div>
+      <div class="bl-editor" id="blacklistEditor" hidden>
+        <textarea id="blacklistInput" spellcheck="false" rows="5" placeholder="每行一个物品 ID，或 JSON Match 数组"></textarea>
+        <div class="bl-help">每行一个物品 ID（可省略 minecraft:），也可粘贴 Match JSON 数组；空内容 = 清空。未提供 blacklist 时默认 minecraft:wooden_hoe。</div>
+        <div class="bl-actions">
+          <button class="data-action primary" id="applyBlacklist">应用</button>
+          <button class="data-action" id="cancelBlacklist">取消</button>
+          <button class="data-action" id="resetBlacklist">还原文件值</button>
+        </div>
+        <div class="bl-error" id="blacklistError" aria-live="polite"></div>
+      </div>
+    </div>
     <div class="data-actions">
       <button class="data-action primary" id="exportXlsx">导出 Excel</button>
       <button class="data-action" id="exportJson">导出 JSON</button>
@@ -329,7 +375,7 @@ body.data-open{overflow:hidden}
       <button class="data-action" id="restoreDisk">重新读取 v3</button>
       <button class="data-action danger data-wide" id="deleteImported" hidden>删除导入视图</button>
     </div>
-    <div class="data-note">导入生成独立的「导入」视图，不修改 v1/v2；删除视图只清浏览器暂存。导入视图导出为 <b>itemsorter-points-imported.json</b>，写入 bot 时改名替换 <b>config/itemsorter-points.json</b>。</div>
+    <div class="data-note">导入生成独立的「导入」视图，不修改 v1/v2/v3；删除视图只清浏览器暂存。导入视图导出为 <b>itemsorter-points-imported.json</b>，写入 bot 时改名替换 <b>config/itemsorter-points.json</b>。Excel 含「黑名单」sheet，JSON 根节点含 <b>blacklist</b>。</div>
     <div class="data-message" id="dataMessage" aria-live="polite"></div>
     <div class="data-list" id="dataList" hidden></div>
     <div class="data-foot"><button class="data-copy" id="copyData" hidden>复制清单</button></div>
@@ -349,6 +395,9 @@ const IMPORTED_VER = 'imported';
 const DATA_CACHE_KEY = 'warehouse-partition.imported-view.v1';
 const LEGACY_DATA_CACHE_KEY = 'warehouse-partition.imported-v2.v1';
 const DATA_CACHE_SCHEMA = 1;
+const DEFAULT_BLACKLIST = [{ name: 'minecraft:wooden_hoe' }];
+const BLACKLIST_STORE_KEY = 'warehouse-partition.blacklist-overrides.v1';
+const BLACKLIST_STORE_SCHEMA = 1;
 const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -378,6 +427,15 @@ const importBtn = document.getElementById('importBtn');
 const importFile = document.getElementById('importFile');
 const restoreDiskBtn = document.getElementById('restoreDisk');
 const deleteImportedBtn = document.getElementById('deleteImported');
+const blacklistCount = document.getElementById('blacklistCount');
+const blacklistList = document.getElementById('blacklistList');
+const editBlacklistBtn = document.getElementById('editBlacklist');
+const blacklistEditor = document.getElementById('blacklistEditor');
+const blacklistInput = document.getElementById('blacklistInput');
+const applyBlacklistBtn = document.getElementById('applyBlacklist');
+const cancelBlacklistBtn = document.getElementById('cancelBlacklist');
+const resetBlacklistBtn = document.getElementById('resetBlacklist');
+const blacklistError = document.getElementById('blacklistError');
 const toastEl = document.getElementById('toast');
 const verSwitch = document.getElementById('verSwitch');
 const verButtons = [...verSwitch.querySelectorAll('button[data-ver]')];
@@ -398,7 +456,9 @@ for (const s of slots) areaSlots[s.a].push(s);
 const slotByPoint = new Map();
 for (const s of slots) slotByPoint.set(s.px.toFixed(2) + ',' + s.pz.toFixed(2), s);
 const SLOT_POINTS = slots.map(s => ({area:s.a, side:s.s, slot:s.i, x:s.px, y:s.ptY, z:s.pz, yaw:s.yaw, pitch:s.pitch}));
-const IO = (window.PointsIO && window.PointsIO.create({slots:SLOT_POINTS, itemCn:ITEM_CN, areas:AREAS})) || null;
+const IO = (window.PointsIO && window.PointsIO.create({
+  slots: SLOT_POINTS, itemCn: ITEM_CN, areas: AREAS, defaultBlacklist: DEFAULT_BLACKLIST,
+})) || null;
 
 let units = [];
 let unitBySlot = new Map();
@@ -426,6 +486,9 @@ let importedView = null;
 let dataBusy = false;
 let lastDataListText = '';
 let toastTimer = null;
+let blacklistOverrides = {};
+const blacklistOriginals = new Map();
+const dirtyViews = new Set();
 
 function add(tag, attrs, parent) {
   const e = document.createElementNS(NS, tag);
@@ -695,25 +758,60 @@ function formatStamp(iso) {
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+function cloneBlacklist(list) { return JSON.parse(JSON.stringify(Array.isArray(list) ? list : [])); }
+function blacklistOf(data) { return Array.isArray(data?.blacklist) ? data.blacklist : []; }
+function blacklistEntryText(m) {
+  const parts = [];
+  if (m.name) {
+    const id = String(m.name).replace(/^minecraft:/, '');
+    parts.push(`${ITEM_CN[id] || id}（${m.name}）`);
+  }
+  if (m.nameRegex) parts.push(`ID 正则：${m.nameRegex}`);
+  if (m.enchantments) parts.push(`附魔：${Object.entries(m.enchantments).map(([k, v]) => `${k} ${v}`).join(' / ')}`);
+  if (m.customName) parts.push(`名称：${m.customName}`);
+  if (m.customNameRegex) parts.push(`名称正则：${m.customNameRegex}`);
+  if (m.lore) parts.push(`Lore：${m.lore}`);
+  if (m.loreRegex) parts.push(`Lore 正则：${m.loreRegex}`);
+  if (m.potionId !== undefined) parts.push(`药水 ID：${m.potionId}`);
+  if (m.effects) parts.push(`效果：${m.effects.join(' / ')}`);
+  return parts.join(' + ') || JSON.stringify(m);
+}
+function blacklistEntryHTML(m) { return `<span class="bl-tag">${escapeHtml(blacklistEntryText(m))}</span>`; }
+function formatBlacklistEditor(list) {
+  const arr = Array.isArray(list) ? list : [];
+  if (!arr.length) return '';
+  const simple = arr.every(m => m && typeof m === 'object' && !Array.isArray(m)
+    && Object.keys(m).length === 1 && typeof m.name === 'string');
+  if (simple) return arr.map(m => m.name).join('\n');
+  return JSON.stringify(arr, null, 2);
+}
+function formatBlacklistError(e) {
+  const p = String(e.path || '')
+    .replace(/^blacklist\[(\d+)\]\.?/, (_, i) => `第${Number(i) + 1}条 `)
+    .trim();
+  return `${p ? p + '：' : ''}${e.message || e}`;
+}
 function dataSourceText() {
   if (!loadedVer) return '等待点位数据加载…';
   if (currentVer === IMPORTED_VER) {
     const m = importedView?.meta || {};
     return `导入视图 · ${m.fileName || '文件'}（${formatStamp(m.importedAt)}）`;
   }
-  return currentVer === 'v3' ? 'v3 · 磁盘 itemsorter-points-v3.json'
+  const base = currentVer === 'v3' ? 'v3 · 磁盘 itemsorter-points-v3.json'
     : currentVer === 'v2' ? 'v2 · 磁盘 itemsorter-points-v2.json'
     : 'v1 · 磁盘 itemsorter-points-v1.json';
+  return dirtyViews.has(currentVer) ? `${base} · 黑名单已修改（未导出）` : base;
 }
 function updateDataUI() {
   if (!dataSource) return;
   dataSource.textContent = dataSourceText();
+  const bl = blacklistOf(currentData()).length;
   if (!IO) {
     dataStats.textContent = '导入导出组件未加载（assets/points-io.js）';
   } else if (!window.XLSX) {
-    dataStats.textContent = `${units.length} 单元 / ${ruleCount} 规则；Excel 组件未加载，JSON 可用`;
+    dataStats.textContent = `${units.length} 单元 / ${ruleCount} 规则；Excel 组件未加载，JSON 可用 · 黑名单 ${bl}`;
   } else {
-    dataStats.textContent = `${units.length} 单元 / ${ruleCount} 规则 / 占用 ${units.filter(u => u.slot).length} 格`;
+    dataStats.textContent = `${units.length} 单元 / ${ruleCount} 规则 / 占用 ${units.filter(u => u.slot).length} 格 · 黑名单 ${bl}`;
   }
   const busy = dataBusy || !!loadingVer;
   exportXlsxBtn.disabled = busy || !IO || !window.XLSX || !loadedVer;
@@ -727,10 +825,151 @@ function updateDataUI() {
     ? `删除导入视图：${importedView.meta?.fileName || '文件'}（${formatStamp(importedView.meta?.importedAt)}）`
     : '';
   if (!loadedVer) dataStats.textContent = '正在加载点位…';
+  renderBlacklistSummary();
+}
+function renderBlacklistSummary() {
+  if (!blacklistCount) return;
+  const data = currentData();
+  const list = blacklistOf(data);
+  blacklistCount.textContent = list.length ? `${list.length} 条` : '无';
+  blacklistList.innerHTML = list.length
+    ? list.map(m => `<div class="bl-item">${blacklistEntryHTML(m)}</div>`).join('')
+    : '<div class="bl-empty">（空）</div>';
+  editBlacklistBtn.disabled = !data || !IO;
+  editBlacklistBtn.textContent = blacklistEditor.hidden ? '编辑' : '收起';
+  resetBlacklistBtn.textContent = currentVer === IMPORTED_VER ? '还原导入值' : '还原文件值';
+}
+function openBlacklistEditor() {
+  const data = currentData();
+  if (!data) return;
+  blacklistInput.value = formatBlacklistEditor(blacklistOf(data));
+  blacklistError.textContent = '';
+  blacklistEditor.hidden = false;
+  editBlacklistBtn.textContent = '收起';
+  resetBlacklistBtn.textContent = currentVer === IMPORTED_VER ? '还原导入值' : '还原文件值';
+  requestAnimationFrame(() => blacklistInput.focus());
+}
+function closeBlacklistEditor() {
+  if (!blacklistEditor) return;
+  blacklistEditor.hidden = true;
+  blacklistError.textContent = '';
+  if (editBlacklistBtn) editBlacklistBtn.textContent = '编辑';
+}
+function toggleBlacklistEditor() {
+  if (blacklistEditor.hidden) openBlacklistEditor();
+  else closeBlacklistEditor();
+}
+function applyBlacklist() {
+  if (!IO) { renderDataMessages({ message: 'assets/points-io.js 未加载' }); return; }
+  const data = currentData();
+  if (!data) return;
+  const res = IO.parseBlacklistText(blacklistInput.value);
+  if (res.errors.length) {
+    blacklistError.innerHTML = res.errors.map(e => escapeHtml(formatBlacklistError(e))).join('<br>');
+    return;
+  }
+  const previous = cloneBlacklist(blacklistOf(data));
+  data.blacklist = res.blacklist;
+  if (currentVer === IMPORTED_VER) {
+    importedView.data = data;
+    if (!importedView.originalBlacklist) importedView.originalBlacklist = cloneBlacklist(previous);
+    persistImported();
+  } else {
+    const original = blacklistOriginals.get(currentVer) || cloneBlacklist(previous);
+    blacklistOverrides[currentVer] = {
+      value: cloneBlacklist(res.blacklist),
+      original: cloneBlacklist(original),
+    };
+    dirtyViews.add(currentVer);
+    saveBlacklistOverrides();
+  }
+  versionData.set(currentVer, data);
+  closeBlacklistEditor();
+  updateVerButtons();
+  renderBlacklistSummary();
+  renderSide();
+  updateSub();
+  updateDataUI();
+  const msg = `黑名单已应用：${res.blacklist.length} 条`;
+  renderDataMessages({ message: msg, warnings: res.warnings });
+  showToast(msg);
+}
+function resetBlacklist() {
+  const data = currentData();
+  if (!data) return;
+  if (currentVer === IMPORTED_VER) {
+    data.blacklist = cloneBlacklist(importedView.originalBlacklist || []);
+    importedView.data = data;
+    persistImported();
+  } else {
+    const o = blacklistOverrides[currentVer];
+    data.blacklist = cloneBlacklist(blacklistOriginals.get(currentVer) || (o && o.original) || []);
+    if (o) {
+      delete blacklistOverrides[currentVer];
+      saveBlacklistOverrides();
+    }
+    dirtyViews.delete(currentVer);
+  }
+  versionData.set(currentVer, data);
+  closeBlacklistEditor();
+  updateVerButtons();
+  renderBlacklistSummary();
+  renderSide();
+  updateSub();
+  updateDataUI();
+  const msg = `黑名单已还原：${blacklistOf(data).length} 条`;
+  renderDataMessages({ message: msg });
+  showToast(msg);
+}
+function loadBlacklistOverrides() {
+  try {
+    const raw = localStorage.getItem(BLACKLIST_STORE_KEY);
+    if (!raw) return;
+    const cache = JSON.parse(raw);
+    if (!cache || cache.schema !== BLACKLIST_STORE_SCHEMA || !cache.overrides) return;
+    if (!IO) return;
+    for (const ver of ['v1', 'v2', 'v3']) {
+      const o = cache.overrides[ver];
+      if (!o || !Array.isArray(o.value)) continue;
+      if (IO.validateBlacklist(o.value).errors.length) continue;
+      const original = Array.isArray(o.original) ? o.original : [];
+      const okOriginal = IO.validateBlacklist(original);
+      blacklistOverrides[ver] = {
+        value: cloneBlacklist(o.value),
+        original: okOriginal.errors.length ? [] : cloneBlacklist(original),
+      };
+      dirtyViews.add(ver);
+    }
+  } catch (_) {
+    blacklistOverrides = {};
+  }
+}
+function saveBlacklistOverrides() {
+  try {
+    const overrides = {};
+    for (const [ver, o] of Object.entries(blacklistOverrides)) {
+      if (!o) continue;
+      overrides[ver] = { value: cloneBlacklist(o.value), original: cloneBlacklist(o.original) };
+    }
+    localStorage.setItem(BLACKLIST_STORE_KEY, JSON.stringify({ schema: BLACKLIST_STORE_SCHEMA, overrides }));
+  } catch (_) {}
+}
+function applyVersionBlacklist(ver, data) {
+  blacklistOriginals.set(ver, cloneBlacklist(blacklistOf(data)));
+  const o = blacklistOverrides[ver];
+  if (o) {
+    data.blacklist = cloneBlacklist(o.value);
+    blacklistOriginals.set(ver, cloneBlacklist(o.original));
+    dirtyViews.add(ver);
+  } else {
+    dirtyViews.delete(ver);
+  }
+  return data;
 }
 function openData() {
   hideTip();
   closeSearch();
+  closeBlacklistEditor();
   renderDataMessages({});
   dataOverlay.classList.add('on');
   document.body.classList.add('data-open');
@@ -738,6 +977,7 @@ function openData() {
   requestAnimationFrame(() => dataClose.focus());
 }
 function closeData() {
+  closeBlacklistEditor();
   dataOverlay.classList.remove('on');
   document.body.classList.remove('data-open');
   if (dataBtn) dataBtn.focus();
@@ -898,8 +1138,8 @@ async function handleImportFile(file) {
       importedAt: new Date().toISOString(),
       source: ext,
     });
-    const s = result.stats || { rules: 0, units: 0, occupied: 0 };
-    const summary = `导入成功：${s.units} 单元 / ${s.rules} 规则 / 占用 ${s.occupied} 格`;
+    const s = result.stats || { rules: 0, units: 0, occupied: 0, blacklist: 0 };
+    const summary = `导入成功：${s.units} 单元 / ${s.rules} 规则 / 占用 ${s.occupied} 格 · 黑名单 ${s.blacklist || 0} 条`;
     if (result.warnings.length) {
       renderDataMessages({ message: summary, warnings: result.warnings });
     } else {
@@ -914,7 +1154,7 @@ async function handleImportFile(file) {
   }
 }
 async function applyImportedData(data, meta) {
-  importedView = { data, meta };
+  importedView = { data, meta, originalBlacklist: cloneBlacklist(blacklistOf(data)) };
   persistImported();
   versionData.set(IMPORTED_VER, data);
   await ensureV1();
@@ -930,6 +1170,7 @@ function persistImported() {
       importedAt: importedView.meta.importedAt,
       fileName: importedView.meta.fileName,
       source: importedView.meta.source,
+      originalBlacklist: importedView.originalBlacklist || [],
       data: importedView.data,
     });
     if (payload.length > 2.4 * 1024 * 1024) throw new Error('数据超过 localStorage 容量');
@@ -948,13 +1189,15 @@ function loadCachedImport() {
     const cache = JSON.parse(raw);
     if (!cache || cache.schema !== DATA_CACHE_SCHEMA || !cache.data) throw new Error('缓存格式不匹配');
     if (!IO) throw new Error('PointsIO 未加载');
-    const v = IO.validate(cache.data);
+    const data = IO.applyDefaults(cache.data);
+    const v = IO.validate(data);
     if (v.errors.length) throw new Error('缓存数据无效');
     importedView = {
-      data: cache.data,
+      data,
       meta: { importedAt: cache.importedAt, fileName: cache.fileName, source: cache.source },
+      originalBlacklist: cloneBlacklist(Array.isArray(cache.originalBlacklist) ? cache.originalBlacklist : blacklistOf(data)),
     };
-    versionData.set(IMPORTED_VER, cache.data);
+    versionData.set(IMPORTED_VER, data);
     if (key === LEGACY_DATA_CACHE_KEY) {
       try {
         localStorage.setItem(DATA_CACHE_KEY, raw);
@@ -966,8 +1209,14 @@ function loadCachedImport() {
     try { localStorage.removeItem(key); } catch (_) {}
   }
 }
-async function reloadDiskV2() {
+async function reloadDiskV3() {
   if (dataBusy) return;
+  if (blacklistOverrides.v3 && !window.confirm('重新读取 v3 将丢弃 v3 的黑名单修改，继续？')) return;
+  if (blacklistOverrides.v3) {
+    delete blacklistOverrides.v3;
+    dirtyViews.delete('v3');
+    saveBlacklistOverrides();
+  }
   setDataBusy(true);
   try {
     const ok = await loadVersion('v3', { keepView: true, disk: true });
@@ -1466,8 +1715,13 @@ importFile.addEventListener('change', e => {
   e.target.value = '';
   handleImportFile(f);
 });
-restoreDiskBtn.addEventListener('click', reloadDiskV2);
+restoreDiskBtn.addEventListener('click', reloadDiskV3);
 deleteImportedBtn.addEventListener('click', deleteImportedView);
+editBlacklistBtn.addEventListener('click', toggleBlacklistEditor);
+applyBlacklistBtn.addEventListener('click', applyBlacklist);
+cancelBlacklistBtn.addEventListener('click', closeBlacklistEditor);
+resetBlacklistBtn.addEventListener('click', resetBlacklist);
+blacklistInput.addEventListener('input', () => { blacklistError.textContent = ''; });
 dataCopy.addEventListener('click', copyDataMessages);
 window.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
@@ -1529,6 +1783,7 @@ function renderOverview() {
   const totalItems = units.reduce((n, u) => n + u.count, 0);
   const counts = {};
   for (const u of units) counts[u.area] = (counts[u.area] || 0) + 1;
+  const bl = blacklistOf(currentData());
   side.innerHTML = `<h2>分区概览</h2>
     <div class="meta">8 区 × 2 侧 × 55 格 = 880 格</div>
     <div class="kpis">
@@ -1553,10 +1808,18 @@ function renderOverview() {
       <div><b>领取按钮</b> ${fmtB(specialPoints.button)}</div>
       <div><b>准备按钮</b> ${fmtB(specialPoints.readyButton)}</div>
     </div>
-    <div class="note">右下角白色角标 = 合并编组单元（多物品共用一个点位）；顶部可切换 v1 冻结快照与 v2 当前版本，差异按单元名对比，空位保留给后续扩展。</div>`;
+    <h3>黑名单 <span class="bl-count">${bl.length ? bl.length + ' 条' : '无'}</span></h3>
+    <div class="special bl-overview">
+      ${bl.length ? bl.map(m => `<div>${blacklistEntryHTML(m)}</div>`).join('') : '<div class="bl-empty">（空）</div>'}
+      <button class="bl-inline-edit" id="editBlacklistInline">编辑黑名单</button>
+      <div class="bl-note">点按钮前手持命中项会先丢到垃圾点；非手持仍正常分拣。</div>
+    </div>
+    <div class="note">右下角白色角标 = 合并编组单元（多物品共用一个点位）；顶部切换 v1 / v2 / v3 / 导入视图，差异按单元名对比；黑名单修改会标记版本，导出 JSON 保存。</div>`;
   side.querySelectorAll('.lrow').forEach(el => el.addEventListener('click', () => selectArea(el.dataset.area)));
   side.querySelectorAll('.lrow').forEach(el => el.addEventListener('mouseenter', () => { if (!selectedArea) highlightArea(el.dataset.area, true); }));
   side.querySelectorAll('.lrow').forEach(el => el.addEventListener('mouseleave', () => { if (!selectedArea) highlightArea(null, false); }));
+  const blEdit = side.querySelector('#editBlacklistInline');
+  if (blEdit) blEdit.addEventListener('click', () => { openData(); openBlacklistEditor(); });
 }
 function fmtP(p) {
   if (!p) return '—';
@@ -1630,6 +1893,7 @@ function updateVerButtons() {
     const on = b.dataset.ver === currentVer;
     b.classList.toggle('on', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.classList.toggle('dirty', b.dataset.ver !== IMPORTED_VER && dirtyViews.has(b.dataset.ver));
   });
   const impBtn = verButtons.find(b => b.dataset.ver === IMPORTED_VER);
   if (impBtn) {
@@ -1642,9 +1906,10 @@ function updateVerButtons() {
 }
 function updateSub() {
   const tag = currentVer === 'v1' ? 'v1 · 冻结' : currentVer === 'v2' ? 'v2 · 冻结' : currentVer === IMPORTED_VER ? '导入 · 临时' : 'v3 · 当前';
+  const dirty = currentVer !== IMPORTED_VER && dirtyViews.has(currentVer) ? ' · 黑名单已修改' : '';
   const diff = currentVer === 'v1' ? '' : ` · ${diffSummaryText()}`;
   document.getElementById('sub').textContent =
-    `${tag} · ${units.length} 个存储单元 · ${ruleCount} 条规则${diff} · 880 格（8 区 × 2 侧 × 55）`;
+    `${tag} · ${units.length} 个存储单元 · ${ruleCount} 条规则${dirty}${diff} · 880 格（8 区 × 2 侧 × 55）`;
 }
 function showLoadError(ver, e) {
   const err = document.getElementById('err');
@@ -1661,14 +1926,17 @@ async function fetchVersion(ver, opts = {}) {
   const disk = !!opts.disk;
   if (ver === IMPORTED_VER) {
     if (!importedView) throw new Error('导入视图不存在');
-    versionData.set(IMPORTED_VER, importedView.data);
-    return importedView.data;
+    const data = IO ? IO.applyDefaults(importedView.data) : importedView.data;
+    importedView.data = data;
+    versionData.set(IMPORTED_VER, data);
+    return data;
   }
   if (!force && !disk && versionData.has(ver)) return versionData.get(ver);
   const res = await fetch(VER_FILES[ver], {cache:'no-store'});
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
-  if (!data || !Array.isArray(data.items)) throw new Error('items 不是数组');
+  const raw = await res.json();
+  if (!raw || !Array.isArray(raw.items)) throw new Error('items 不是数组');
+  const data = applyVersionBlacklist(ver, IO ? IO.applyDefaults(raw) : raw);
   versionData.set(ver, data);
   return data;
 }
@@ -1684,6 +1952,7 @@ function applyPointsData(data, opts = {}) {
   const prevSel = opts.prevSel !== undefined ? opts.prevSel : (selectedUnit ? selectedUnit.label : null);
   const prevArea = opts.prevArea !== undefined ? opts.prevArea : selectedArea;
   const keepView = opts.keepView !== false && loadedVer !== null;
+  closeBlacklistEditor();
   specialPoints = {
     home:data.home, collector:data.collector, trash:data.trash, minecart:data.minecart,
     button:data.button, ready:data.ready, readyButton:data.readyButton,
@@ -1749,6 +2018,7 @@ verSwitch.addEventListener('click', e => {
   if (ver === currentVer && loadedVer === ver) return;
   loadVersion(ver, {keepView: true});
 });
+loadBlacklistOverrides();
 loadCachedImport();
 loadVersion('v3', {keepView: false});
 </script>

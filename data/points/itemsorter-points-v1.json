@@ -28315,6 +28315,11 @@
       }
     }
   ],
+  "blacklist": [
+    {
+      "name": "minecraft:wooden_hoe"
+    }
+  ],
   "trash": {
     "x": 5211.5,
     "y": 115,

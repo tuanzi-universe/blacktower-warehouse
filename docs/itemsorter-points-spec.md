@@ -25,8 +25,9 @@
 ```text
 {
   "items": Rule[],                 // 可省略，缺省 []
+  "blacklist"?: Match[],           // 可省略，缺省 []；点按钮前必须清空手持物品的黑名单
   "home"?: Point,                  // homeMode=walk 时必填
-  "trash"?: Point,                 // 可选
+  "trash"?: Point,                 // 可选；blacklist 非空时必填
   "collector": Point,              // 必填
   "minecart": Point,               // 必填（当前仅解析保留，不参与行程）
   "button"?: BlockPoint,           // acquireMode=button 时必填
@@ -35,7 +36,7 @@
 }
 ```
 
-`items`、`home`、`trash`、`button`、`ready`、`readyButton` 可省略；`collector` 与 `minecart` 永远必填。省略 `items` 等价于空数组。
+`items`、`blacklist`、`home`、`trash`、`button`、`ready`、`readyButton` 可省略；`collector` 与 `minecart` 永远必填。省略 `items` / `blacklist` 等价于空数组。
 
 ## 3. 基础数据类型
 
@@ -163,6 +164,7 @@ JSON Schema 无法表达“取决于 YAML 配置”的必填关系，生成器�
 | `plugins.itemsorter.acquireMode: auto`          | 无                       | `button` 可省略                                                         |
 | `plugins.itemsorter.readyAction.enabled: true`  | `ready` 和 `readyButton` | `ready` 的 `yaw` / `pitch` 可省略，默认 `0`                             |
 | `plugins.itemsorter.readyAction.enabled: false` | 无                       | 两个点都可省略                                                          |
+| `blacklist` 非空                                | `trash`                  | 黑名单物品投掷目标，缺 `trash` 时插件初始化失败                         |
 | 任意配置                                        | `collector`、`minecart`  | 永远必填                                                                |
 
 补充建议：
@@ -229,6 +231,7 @@ JSON Schema 无法表达“取决于 YAML 配置”的必填关系，生成器�
 - **`home`**：仅在 `homeMode: walk` 时作为登录后的起点被寻路访问；`teleport` 模式使用 `homeName`，不读取该点位。
 - **`minecart`**：必填但当前未参与行程，属于保留字段。没有实际矿车点时，可填写与 `collector` 相同的合法点位。
 - **`button`**：`acquireMode: button` 时使用，必须是真实可交互方块；与 `collector` 的水平距离 ≤ 3、垂直距离 ≤ 2，否则插件初始化失败。
+- **`blacklist`**：任意一条 `Match` 命中（OR）即算黑名单物品。每次点击 `button` / `readyButton` 前检查手持物品，命中则先到 `trash` 投掷清空后再按键；按下按钮前命中的手持物品直接进垃圾点，即使它同时命中某条 `items` 规则。非手持的黑名单物品仍走正常分拣流程。`blacklist` 非空必须同时输出 `trash`；没有任何按钮流程（`acquireMode` 非 `button` 且 `readyAction` 关闭）时黑名单不会生效。
 - **`ready` / `readyButton`**：`readyAction.enabled` 时使用。每轮从 `collector` 出发前先走到 `ready`、转向，再点击 `readyButton`；点击成功后等待 `readyAction.delayTicks` 再开始分拣。
 - **可站立性**：`Point` 的 `x` / `z` 必须是 bot 能到达并站立的位置。生成器若从建筑方块坐标推导，需要转换为脚部站位，不能直接使用方块中心或方块内部坐标。
 
@@ -291,6 +294,7 @@ JSON Schema 无法表达“取决于 YAML 配置”的必填关系，生成器�
 - [ ] 所有 `name` 为小写物品 ID；`nameRegex` 包含 `minecraft:` 前缀且能被 JS 编译。
 - [ ] 按第 5 节补齐 `home` / `button` / `ready` / `readyButton`。
 - [ ] `button` 与 `collector` 的距离满足水平 ≤ 3、垂直 ≤ 2。
+- [ ] 输出 `blacklist` 时已同时输出 `trash`。
 - [ ] 不存在完全重复的 `match`；特例规则的优先级高于通用规则。
 - [ ] 未配置 `trash` 时，生成器已明确接受“未映射物品会留在背包”的后果。
 - [ ] 文件为 UTF-8 无 BOM，且已通过原子写入落盘。
@@ -307,6 +311,7 @@ JSON Schema 无法表达“取决于 YAML 配置”的必填关系，生成器�
 | `配置为 acquireMode=button，但...缺少 button 点位`     | 补齐 `button`                          |
 | `按钮距离 collector 过远`                              | 调整 `button` 坐标                     |
 | `启用了 readyAction，但...缺少 ready/readyButton 点位` | 补齐两个准备点位                       |
+| `配置了 blacklist，但...缺少 trash 点位`               | 补齐 `trash`                           |
 
 ## 10. 完整示例
 
@@ -380,6 +385,10 @@ plugins:
     }
   ],
   "home": { "x": 100, "y": 64, "z": 100, "yaw": 0, "pitch": 0, "label": "起点" },
+  "blacklist": [
+    { "name": "minecraft:water_bucket" },
+    { "nameRegex": "^minecraft:.*_shulker_box$" }
+  ],
   "trash": { "x": 108, "y": 64, "z": 100, "yaw": 180, "pitch": 0, "label": "垃圾点" },
   "collector": { "x": 100, "y": 64, "z": 110, "yaw": 180, "pitch": 0, "label": "接收点" },
   "minecart": { "x": 100, "y": 64, "z": 111, "yaw": 180, "pitch": 0, "label": "矿车点" },
@@ -406,6 +415,11 @@ plugins:
       "type": "array",
       "default": [],
       "items": { "$ref": "#/definitions/rule" }
+    },
+    "blacklist": {
+      "type": "array",
+      "default": [],
+      "items": { "$ref": "#/definitions/match" }
     },
     "home": { "$ref": "#/definitions/point" },
     "trash": { "$ref": "#/definitions/point" },

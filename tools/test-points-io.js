@@ -13,6 +13,7 @@ const IO = PointsIO.create({
   })),
   itemCn: htmlData.itemCn,
   areas: htmlData.areas,
+  defaultBlacklist: [{ name: 'minecraft:wooden_hoe' }],
 });
 
 const AREAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -57,6 +58,10 @@ function normalizeSpecial(data) {
   return out;
 }
 
+function blacklistOf(data) {
+  return IO.normalize(data).blacklist;
+}
+
 function workbookBuffer(wb) {
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }
@@ -66,7 +71,7 @@ function roundTrip(name, file) {
   const data = load(file);
   const v = IO.validate(data);
   ok('validate has no errors', () => assert.strictEqual(v.errors.length, 0, JSON.stringify(v.errors.slice(0, 5), null, 2)));
-  console.log(`  stats: rules=${v.stats.rules} units=${v.stats.units} occupied=${v.stats.occupied} warnings=${v.warnings.length}`);
+  console.log(`  stats: rules=${v.stats.rules} units=${v.stats.units} occupied=${v.stats.occupied} blacklist=${v.stats.blacklist} warnings=${v.warnings.length}`);
   if (v.warnings.length) console.log('  warnings: ' + v.warnings.slice(0, 8).map(w => w.path + ' ' + w.message).join('\n            '));
 
   ok('JSON export starts with {', () => {
@@ -81,6 +86,7 @@ function roundTrip(name, file) {
     assert.strictEqual(jp.stats.rules, v.stats.rules);
     assert.strictEqual(jp.stats.units, v.stats.units);
     assert.strictEqual(jp.stats.occupied, v.stats.occupied);
+    assert.strictEqual(jp.stats.blacklist, v.stats.blacklist);
   });
   ok('JSON round-trip same unit matches', () => {
     assert.deepStrictEqual([...unitMatchSets(jp.data).entries()].sort(), [...unitMatchSets(data).entries()].sort());
@@ -88,10 +94,13 @@ function roundTrip(name, file) {
   ok('JSON round-trip same special points', () => {
     assert.deepStrictEqual(normalizeSpecial(jp.data), normalizeSpecial(data));
   });
+  ok('JSON round-trip same blacklist', () => {
+    assert.deepStrictEqual(blacklistOf(jp.data), blacklistOf(data));
+  });
 
   const wb = IO.buildWorkbook(data, { version: name, versionName: name, source: 'test', exportedAt: '2026-11-20 00:00:00' }, XLSX);
   ok('sheet names', () => {
-    assert.deepStrictEqual(wb.SheetNames, ['汇总', ...AREAS, '规则明细']);
+    assert.deepStrictEqual(wb.SheetNames, ['汇总', '黑名单', ...AREAS, '规则明细']);
   });
   ok('partition sheets have 111 rows', () => {
     for (const a of AREAS) {
@@ -101,9 +110,14 @@ function roundTrip(name, file) {
       assert.strictEqual(rows[0][9], '规则(JSON)');
     }
   });
-  ok('detail sheet has 1832 rows (note + header + rules)', () => {
+  ok('blacklist sheet has note + header + entries', () => {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets['黑名单'], { header: 1 });
+    assert.strictEqual(rows.length, 2 + blacklistOf(data).length, String(rows.length));
+    assert.strictEqual(rows[1][1], '物品ID');
+  });
+  ok('detail sheet has note + header + rules', () => {
     const rows = XLSX.utils.sheet_to_json(wb.Sheets['规则明细'], { header: 1 });
-    assert.strictEqual(rows.length, 1832, String(rows.length));
+    assert.strictEqual(rows.length, data.items.length + 2, String(rows.length));
   });
 
   const buf = workbookBuffer(wb);
@@ -115,12 +129,16 @@ function roundTrip(name, file) {
     assert.strictEqual(xp.stats.rules, v.stats.rules);
     assert.strictEqual(xp.stats.units, v.stats.units);
     assert.strictEqual(xp.stats.occupied, v.stats.occupied);
+    assert.strictEqual(xp.stats.blacklist, v.stats.blacklist);
   });
   ok('Excel round-trip same unit matches', () => {
     assert.deepStrictEqual([...unitMatchSets(xp.data).entries()].sort(), [...unitMatchSets(data).entries()].sort());
   });
   ok('Excel round-trip same special points', () => {
     assert.deepStrictEqual(normalizeSpecial(xp.data), normalizeSpecial(data));
+  });
+  ok('Excel round-trip same blacklist', () => {
+    assert.deepStrictEqual(blacklistOf(xp.data), blacklistOf(data));
   });
   ok('Excel round-trip same unit first-occurrence order', () => {
     const seq = d => {
@@ -173,6 +191,7 @@ function editSheet(wb, name, fn) {
 function main() {
   const v2 = roundTrip('v2', 'data/points/itemsorter-points-v2.json');
   roundTrip('v1', 'data/points/itemsorter-points-v1.json');
+  roundTrip('v3', 'data/points/itemsorter-points-v3.json');
 
   console.log('\n[extras]');
   const base = v2.data;
@@ -237,6 +256,86 @@ function main() {
       });
     });
     expectError('slot + custom both filled', IO.parseWorkbook(buf, XLSX, { type: 'buffer' }), '只能填写一个');
+  }
+
+  console.log('\n[blacklist]');
+  {
+    const d = JSON.parse(JSON.stringify(base));
+    delete d.blacklist;
+    ok('missing blacklist gets default', () => {
+      assert.deepStrictEqual(IO.applyDefaults(d).blacklist, [{ name: 'minecraft:wooden_hoe' }]);
+    });
+    ok('explicit empty blacklist stays empty', () => {
+      assert.deepStrictEqual(IO.applyDefaults({ ...d, blacklist: [] }).blacklist, []);
+    });
+    const p = IO.parseJson(JSON.stringify(d));
+    ok('JSON import applies default blacklist', () => {
+      assert.strictEqual(p.errors.length, 0, JSON.stringify(p.errors.slice(0, 3), null, 2));
+      assert.deepStrictEqual(p.data.blacklist, [{ name: 'minecraft:wooden_hoe' }]);
+    });
+  }
+  {
+    const line = IO.parseBlacklistText('wooden_hoe\nminecraft:stone');
+    ok('text blacklist line mode', () => {
+      assert.strictEqual(line.errors.length, 0, JSON.stringify(line.errors, null, 2));
+      assert.deepStrictEqual(line.blacklist, [
+        { name: 'minecraft:wooden_hoe' },
+        { name: 'minecraft:stone' },
+      ]);
+    });
+    const json = IO.parseBlacklistText('[{"nameRegex":"^minecraft:.*_shulker_box$"}]');
+    ok('text blacklist JSON mode', () => {
+      assert.strictEqual(json.errors.length, 0, JSON.stringify(json.errors, null, 2));
+      assert.deepStrictEqual(json.blacklist, [{ nameRegex: '^minecraft:.*_shulker_box$' }]);
+    });
+    const bad = IO.parseBlacklistText('[{"name":"","nameRegex":"["}]');
+    expectError('text blacklist rejects invalid match', bad, 'name');
+  }
+  {
+    const d = JSON.parse(JSON.stringify(base));
+    delete d.trash;
+    expectError('blacklist requires trash', IO.validate(d), 'blacklist');
+  }
+  {
+    const d = JSON.parse(JSON.stringify(base));
+    d.blacklist = [{ name: 'minecraft:wooden_hoe' }, { nameRegex: '^minecraft:.*_shulker_box$' }];
+    const wb = IO.buildWorkbook(d, meta, XLSX);
+    ok('blacklist Excel sheet entries', () => {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets['黑名单'], { header: 1 });
+      assert.strictEqual(rows.length, 4, String(rows.length));
+      assert.strictEqual(rows[2][1], 'minecraft:wooden_hoe');
+      assert.strictEqual(rows[3][2], '^minecraft:.*_shulker_box$');
+    });
+    const p = IO.parseWorkbook(workbookBuffer(wb), XLSX, { type: 'buffer' });
+    ok('blacklist Excel round-trip', () => {
+      assert.strictEqual(p.errors.length, 0, JSON.stringify(p.errors.slice(0, 3), null, 2));
+      assert.deepStrictEqual(blacklistOf(p.data), blacklistOf(d));
+    });
+  }
+  {
+    const wb = IO.buildWorkbook(base, meta, XLSX);
+    delete wb.Sheets['黑名单'];
+    wb.SheetNames = wb.SheetNames.filter(n => n !== '黑名单');
+    const p = IO.parseWorkbook(workbookBuffer(wb), XLSX, { type: 'buffer' });
+    ok('Excel without blacklist sheet applies default', () => {
+      assert.strictEqual(p.errors.length, 0, JSON.stringify(p.errors.slice(0, 3), null, 2));
+      assert.deepStrictEqual(blacklistOf(p.data), [{ name: 'minecraft:wooden_hoe' }]);
+    });
+  }
+  {
+    const d = JSON.parse(JSON.stringify(base));
+    d.blacklist = [];
+    const p = IO.parseWorkbook(workbookBuffer(IO.buildWorkbook(d, meta, XLSX)), XLSX, { type: 'buffer' });
+    ok('Excel empty blacklist sheet means empty', () => {
+      assert.strictEqual(p.errors.length, 0, JSON.stringify(p.errors.slice(0, 3), null, 2));
+      assert.deepStrictEqual(blacklistOf(p.data), []);
+    });
+  }
+  {
+    const buf = mutatedWorkbook(base, wb => {
+      editSheet(wb, '黑名单', rows => { rows[2][1] = ''; });
+    });
+    expectError('blacklist row without match', IO.parseWorkbook(buf, XLSX, { type: 'buffer' }), '黑名单');
   }
 
   console.log('\n[error cases]');

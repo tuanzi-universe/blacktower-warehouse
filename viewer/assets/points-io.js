@@ -9,7 +9,7 @@
   'use strict';
 
   const AREAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-  const ROOT_KEYS = ['items', 'home', 'trash', 'collector', 'minecart', 'button', 'ready', 'readyButton'];
+  const ROOT_KEYS = ['items', 'blacklist', 'home', 'trash', 'collector', 'minecart', 'button', 'ready', 'readyButton'];
   const RULE_KEYS = ['weight', 'match', 'point'];
   const MATCH_KEYS = ['name', 'nameRegex', 'enchantments', 'customName', 'customNameRegex', 'lore', 'loreRegex', 'potionId', 'effects'];
   const POINT_KEYS = ['x', 'y', 'z', 'yaw', 'pitch', 'label', 'area', 'side'];
@@ -29,6 +29,10 @@
     '全局序号', '区', '侧', '格位', '单元名', '规则序号', '权重',
     '物品ID', '物品ID正则', '附魔(JSON)', '自定义名称', '自定义名称正则',
     'Lore', 'Lore正则', '药水ID', '效果(JSON)', 'x', 'y', 'z', 'yaw', 'pitch',
+  ];
+  const BLACKLIST_HEADER = [
+    '序号', '物品ID', '物品ID正则', '附魔(JSON)', '自定义名称', '自定义名称正则',
+    'Lore', 'Lore正则', '药水ID', '效果(JSON)', '备注',
   ];
   const MAX_CELL = 32000;       // Excel 单元格上限 32767，留余量
   const MAX_SHEET_ROWS = 5000;
@@ -76,7 +80,8 @@
     if (typeof c.name === 'string') c.name = c.name.replace(/^minecraft:/, '');
     return JSON.stringify(c);
   }
-  function emptyStats() { return { rules: 0, units: 0, occupied: 0, byArea: {} }; }
+  function emptyStats() { return { rules: 0, units: 0, occupied: 0, blacklist: 0, byArea: {} }; }
+  function cloneJson(v) { return JSON.parse(JSON.stringify(v)); }
   function firstNonEmpty(set) { for (const v of set) if (v) return v; return ''; }
 
   function itemIdOfMatch(m) {
@@ -100,6 +105,15 @@
     for (const s of slots) {
       slotByKey.set(`${s.area}-${s.side}-${s.slot}`, s);
       slotByPoint.set(pointKey(s), s);
+    }
+    const defaultBlacklist = Array.isArray(opts.defaultBlacklist) ? cloneJson(opts.defaultBlacklist) : null;
+
+    function applyDefaults(data) {
+      if (!isObject(data) || !defaultBlacklist) return data;
+      if (!has(data, 'blacklist') || data.blacklist === undefined) {
+        return { ...data, blacklist: cloneJson(defaultBlacklist) };
+      }
+      return data;
     }
 
     function cnOf(id) { return itemCn[id] || id; }
@@ -155,7 +169,11 @@
         if (u.slot) { a.occupied++; occupied++; }
         a.rules += u.rules.length;
       }
-      return { rules: (data.items || []).length, units: units.length, occupied, byArea };
+      return {
+        rules: (data.items || []).length, units: units.length, occupied,
+        blacklist: Array.isArray(data.blacklist) ? data.blacklist.length : 0,
+        byArea,
+      };
     }
 
     // ---------- 校验 ----------
@@ -178,6 +196,26 @@
         else items = data.items;
       }
       if (!items.length) warn('items', 'items 为空');
+
+      let blacklist = [];
+      if (has(data, 'blacklist')) {
+        if (!Array.isArray(data.blacklist)) err('blacklist', 'blacklist 必须是数组');
+        else {
+          blacklist = data.blacklist;
+          const seen = new Map();
+          blacklist.forEach((m, i) => {
+            const path = `blacklist[${i}]`;
+            if (!isObject(m)) { err(path, '黑名单项必须是 object'); return; }
+            checkMatch(m, path);
+            const mk = matchKey(m);
+            if (seen.has(mk)) warn(path, `与 ${seen.get(mk)} 的黑名单条件重复`);
+            else seen.set(mk, path);
+          });
+          if (blacklist.length && !has(data, 'trash')) {
+            err('blacklist', 'blacklist 非空时必须同时提供 trash 点位');
+          }
+        }
+      }
 
       function compile(src, path) {
         try { new RegExp(src); return true; }
@@ -378,7 +416,50 @@
 
       return {
         errors, warnings,
-        stats: { rules: items.length, units: groups.size, occupied, byArea },
+        stats: { rules: items.length, units: groups.size, occupied, blacklist: blacklist.length, byArea },
+      };
+    }
+
+    function validateBlacklist(list, basePath = 'blacklist') {
+      const stub = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 };
+      const data = { items: [], blacklist: list, trash: stub, collector: stub, minecart: stub };
+      const v = validate(data);
+      const inPath = e => {
+        const p = String(e.path || '');
+        return p === basePath || p.startsWith(basePath + '.') || p.startsWith(basePath + '[');
+      };
+      return { errors: v.errors.filter(inPath), warnings: v.warnings.filter(inPath) };
+    }
+
+    function parseBlacklistText(raw) {
+      const errors = [];
+      const warnings = [];
+      const s = String(raw == null ? '' : raw).trim();
+      if (!s) return { blacklist: [], errors, warnings };
+      let list;
+      if (s.startsWith('[') || s.startsWith('{') || s.startsWith('"')) {
+        let parsed;
+        try { parsed = JSON.parse(s); }
+        catch (e) {
+          errors.push({ path: '黑名单', message: `JSON 解析失败：${e.message}` });
+          return { blacklist: [], errors, warnings };
+        }
+        const norm = v => typeof v === 'string'
+          ? { name: /^minecraft:/.test(v) ? v : `minecraft:${v}` }
+          : v;
+        list = (Array.isArray(parsed) ? parsed : [parsed]).map(norm);
+      } else {
+        list = s.split(/\r?\n/)
+          .map(line => line.trim())
+          .filter(line => line && !line.startsWith('#') && !line.startsWith('//'))
+          .map(line => ({ name: /^minecraft:/.test(line) ? line : `minecraft:${line}` }));
+      }
+      const v = validateBlacklist(list);
+      errors.push(...v.errors);
+      warnings.push(...v.warnings);
+      return {
+        blacklist: errors.length ? [] : list.map(normalizeMatch),
+        errors, warnings,
       };
     }
 
@@ -416,6 +497,7 @@
         o.point = normalizePoint(r.point, 'point');
         return o;
       });
+      out.blacklist = (Array.isArray(data.blacklist) ? data.blacklist : []).map(normalizeMatch);
       for (const key of SPECIAL_ORDER) {
         if (!has(data, key)) continue;
         out[key] = normalizePoint(data[key], SPECIAL_KIND[key]);
@@ -425,13 +507,14 @@
 
     // ---------- JSON ----------
     function buildJson(data) {
-      const v = validate(data);
+      const d = applyDefaults(data);
+      const v = validate(d);
       if (v.errors.length) {
         const e = new Error('点位数据校验失败');
         e.validation = v;
         throw e;
       }
-      return JSON.stringify(normalize(data), null, 2) + '\n';
+      return JSON.stringify(normalize(d), null, 2) + '\n';
     }
 
     function parseJson(raw) {
@@ -448,6 +531,7 @@
         errors.push({ path: 'JSON', message: e.message });
         return { data: null, errors, warnings, stats: emptyStats() };
       }
+      data = applyDefaults(data);
       const v = validate(data);
       errors.push(...v.errors);
       warnings.push(...v.warnings);
@@ -529,6 +613,7 @@
         ['数据源', meta.source || ''],
         ['规则数', stats.rules],
         ['单元数', stats.units],
+        ['黑名单', stats.blacklist || 0],
         ['占用格位', stats.occupied],
         ['空余格位', Math.max(0, 880 - stats.occupied)],
         [],
@@ -562,8 +647,10 @@
         ['规则(JSON) 为该单元全部 match；顺序即单元内优先级，可带 weight。'],
         ['格位存在时坐标由货位自动生成；自定义点位请留空格位并填“自定义点位(JSON)”。'],
         ['“顺序”用于保持规则优先级；留空则按 sheet/格位顺序。'],
+        ['“黑名单”sheet 每行一条 Match；物品ID 可省略 minecraft: 前缀。'],
+        ['未提供黑名单时默认 minecraft:wooden_hoe；显式空数组/空 sheet 表示禁用。'],
         ['“规则明细”仅供审阅，导入不读取。'],
-        ['导入为整份替换 v2；有错误则整份拒绝。'],
+        ['导入生成独立导入视图；有错误则整份拒绝。'],
       );
       return rows;
     }
@@ -590,21 +677,46 @@
       return rows;
     }
 
+    function blacklistRows(data) {
+      const rows = [
+        ['每行一条黑名单 Match；物品ID 可省略 minecraft: 前缀；空表表示无黑名单'],
+        BLACKLIST_HEADER.slice(),
+      ];
+      (data.blacklist || []).forEach((m, i) => {
+        rows.push([
+          i + 1, m.name || '', m.nameRegex || '',
+          m.enchantments ? JSON.stringify(m.enchantments) : '',
+          m.customName || '', m.customNameRegex || '', m.lore || '', m.loreRegex || '',
+          m.potionId !== undefined ? m.potionId : '',
+          m.effects ? JSON.stringify(m.effects) : '',
+          '',
+        ]);
+      });
+      return rows;
+    }
+
     function buildWorkbook(data, meta, XLSX) {
       if (!XLSX || !XLSX.utils) throw new Error('SheetJS (XLSX) 未加载');
-      const v = validate(data);
+      const d = applyDefaults(data);
+      const v = validate(d);
       if (v.errors.length) {
         const e = new Error('点位数据校验失败');
         e.validation = v;
         throw e;
       }
-      const { units } = analyze(data);
+      const { units } = analyze(d);
       const wb = XLSX.utils.book_new();
       const cols = (widths) => widths.map(wch => ({ wch }));
 
-      const sum = XLSX.utils.aoa_to_sheet(summaryRows(data, meta, v.stats, units));
+      const sum = XLSX.utils.aoa_to_sheet(summaryRows(d, meta, v.stats, units));
       sum['!cols'] = cols([18, 14, 10, 10, 10, 10, 10, 28, 8, 8]);
       XLSX.utils.book_append_sheet(wb, sum, '汇总');
+
+      const bl = blacklistRows(d);
+      const bws = XLSX.utils.aoa_to_sheet(bl);
+      bws['!cols'] = cols([6, 28, 30, 30, 20, 24, 30, 30, 8, 30, 16]);
+      bws['!autofilter'] = { ref: `A2:K${bl.length}` };
+      XLSX.utils.book_append_sheet(wb, bws, '黑名单');
 
       for (const a of AREAS) {
         const rows = partitionRows(a, units);
@@ -623,7 +735,7 @@
         XLSX.utils.book_append_sheet(wb, ws, '其他');
       }
 
-      const detail = detailRows(data, units);
+      const detail = detailRows(d, units);
       const dws = XLSX.utils.aoa_to_sheet(detail);
       dws['!cols'] = cols([8, 5, 5, 6, 28, 7, 6, 28, 30, 30, 20, 24, 30, 30, 8, 30, 10, 8, 10, 8, 8]);
       dws['!autofilter'] = { ref: `A2:U${detail.length}` };
@@ -645,6 +757,9 @@
       '规则(json)': '规则(JSON)', '规则json': '规则(JSON)', '规则': '规则(JSON)',
       '自定义点位(json)': '自定义点位(JSON)', '自定义点位json': '自定义点位(JSON)', '自定义点位': '自定义点位(JSON)',
       '备注': '备注', '键': '键', '点位键': '键',
+      '序号': '序号', '物品id': '物品ID', '物品id正则': '物品ID正则',
+      '附魔(json)': '附魔(JSON)', '自定义名称': '自定义名称', '自定义名称正则': '自定义名称正则',
+      'lore': 'Lore', 'lore正则': 'Lore正则', '药水id': '药水ID', '效果(json)': '效果(JSON)',
       'x': 'x', 'y': 'y', 'z': 'z', 'yaw': 'yaw', 'pitch': 'pitch', 'label': 'label',
       'area': 'area', 'side': 'side', '中文名': '中文名',
     };
@@ -731,6 +846,79 @@
         specialRows[key] = i + 1;
       }
       return { special, specialRows, sourceVersion };
+    }
+
+    function parseBlacklist(wb, XLSX, errors, warnings) {
+      const ws = wb.Sheets['黑名单'];
+      if (!ws) {
+        return { blacklist: defaultBlacklist ? cloneJson(defaultBlacklist) : [], rows: [] };
+      }
+      const rows = sheetRows(XLSX, ws);
+      if (!rows.length) return { blacklist: [], rows: [] };
+      let found = null;
+      const matchCols = ['物品ID', '物品ID正则', '附魔(JSON)', '自定义名称', '自定义名称正则', 'Lore', 'Lore正则', '药水ID', '效果(JSON)'];
+      for (let i = 0; i < Math.min(rows.length, 12); i++) {
+        const map = headerMap(rows[i]);
+        if (matchCols.some(k => map[k] !== undefined)) { found = { index: i, map }; break; }
+      }
+      if (!found) {
+        if (rows.some(r => r.some(v => text(v) !== ''))) {
+          errors.push({ path: '黑名单', message: '黑名单 sheet 找不到表头（需 物品ID / 物品ID正则 / 附魔(JSON) 等列）' });
+        }
+        return { blacklist: [], rows: [] };
+      }
+      const map = found.map;
+      const blacklist = [];
+      const rowRefs = [];
+      for (let i = found.index + 1; i < rows.length; i++) {
+        const row = rows[i] || [];
+        const path = `黑名单!第${i + 1}行`;
+        if (!row.some(v => text(v) !== '')) continue;
+        const m = {};
+        const get = k => map[k] !== undefined ? text(row[map[k]]) : '';
+        const name = get('物品ID');
+        if (name) m.name = /^minecraft:/.test(name) ? name : `minecraft:${name}`;
+        for (const k of ['物品ID正则', '自定义名称', '自定义名称正则', 'Lore', 'Lore正则']) {
+          const v = k === '物品ID正则' ? get('物品ID正则') : get(k);
+          if (!v) continue;
+          m[{ '物品ID正则': 'nameRegex', '自定义名称': 'customName', '自定义名称正则': 'customNameRegex', 'Lore': 'lore', 'Lore正则': 'loreRegex' }[k]] = v;
+        }
+        const enchRaw = get('附魔(JSON)');
+        if (enchRaw) {
+          try {
+            const v = JSON.parse(enchRaw);
+            if (!isObject(v)) throw new Error('必须是 object');
+            m.enchantments = v;
+          } catch (e) { errors.push({ path, message: `附魔(JSON) 解析失败：${e.message}` }); continue; }
+        }
+        const potionRaw = get('药水ID');
+        if (potionRaw) {
+          const n = toInt(potionRaw);
+          if (n === null) { errors.push({ path, message: `药水ID 必须是 ≥0 的整数（当前 "${potionRaw}"）` }); continue; }
+          m.potionId = n;
+        }
+        const effRaw = get('效果(JSON)');
+        if (effRaw) {
+          try {
+            const v = JSON.parse(effRaw);
+            if (!Array.isArray(v)) throw new Error('必须是数组');
+            m.effects = v;
+          } catch (e) { errors.push({ path, message: `效果(JSON) 解析失败：${e.message}` }); continue; }
+        }
+        if (!Object.keys(m).length) {
+          errors.push({ path, message: '黑名单行没有匹配条件' });
+          continue;
+        }
+        const bv = validateBlacklist([m]);
+        if (bv.errors.length) {
+          for (const e of bv.errors) errors.push({ path: `${path} ${e.path}`, message: e.message });
+          continue;
+        }
+        for (const w of bv.warnings) warnings.push({ path: `${path} ${w.path}`, message: w.message });
+        blacklist.push(m);
+        rowRefs.push({ sheet: '黑名单', row: i + 1 });
+      }
+      return { blacklist, rows: rowRefs };
     }
 
     function parsePartition(wb, sheetName, XLSX, errors, warnings, seen) {
@@ -859,11 +1047,16 @@
       return units;
     }
 
-    function remap(list, ruleRows, specialRows) {
+    function remap(list, ruleRows, specialRows, blacklistRows) {
       return list.map(e => {
         const m = /^items\[(\d+)\]/.exec(e.path || '');
         if (m) {
           const r = ruleRows[Number(m[1])];
+          if (r) return { ...e, path: `${r.sheet}!第${r.row}行 ${e.path}` };
+        }
+        const bm = /^blacklist\[(\d+)\]/.exec(e.path || '');
+        if (bm) {
+          const r = blacklistRows[Number(bm[1])];
           if (r) return { ...e, path: `${r.sheet}!第${r.row}行 ${e.path}` };
         }
         const key = String(e.path || '').split('.')[0];
@@ -907,6 +1100,7 @@
 
       const sum = parseSummary(wb, XLSX, errors, warnings);
       if (!sum) return { data: null, errors, warnings, stats: emptyStats(), meta: {} };
+      const bl = parseBlacklist(wb, XLSX, errors, warnings);
 
       const seen = { slots: new Map(), points: new Map() };
       let units = [];
@@ -933,14 +1127,14 @@
         }
       }
 
-      const data = { items };
+      const data = { items, blacklist: bl.blacklist };
       for (const key of SPECIAL_ORDER) if (sum.special[key]) data[key] = sum.special[key];
 
       const v = validate(data);
       errors.push(...v.errors);
       warnings.push(...v.warnings);
-      const allErrors = remap(errors, ruleRows, sum.specialRows);
-      const allWarnings = remap(warnings, ruleRows, sum.specialRows);
+      const allErrors = remap(errors, ruleRows, sum.specialRows, bl.rows);
+      const allWarnings = remap(warnings, ruleRows, sum.specialRows, bl.rows);
       const normalized = allErrors.length ? null : normalize(data);
       return {
         data: normalized,
@@ -954,6 +1148,7 @@
     return {
       buildWorkbook, parseWorkbook, buildJson, parseJson,
       validate, normalize, stats: statsOf, analyze,
+      applyDefaults, validateBlacklist, parseBlacklistText,
     };
   }
 

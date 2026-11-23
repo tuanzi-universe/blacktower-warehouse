@@ -79,7 +79,21 @@ for (const [k, set] of Object.entries(sideCount)) {
   if (/^[A-H]-[LR]$/.test(k) && set.size > 55) problems.push(`${k} units ${set.size} > 55`);
 }
 
-console.log('rules', rules.length, 'units', units, 'obtainable', obtainable.length);
+// 黑名单
+const blacklist = j.blacklist;
+if (blacklist !== undefined) {
+  if (!Array.isArray(blacklist)) problems.push('blacklist 必须是数组');
+  else {
+    if (blacklist.length && !j.trash) problems.push('blacklist 非空但缺少 trash 点位');
+    blacklist.forEach((m, i) => {
+      if (!m || typeof m !== 'object' || Array.isArray(m) || !Object.keys(m).length) {
+        problems.push(`blacklist[${i}] 不是有效的 Match object`);
+      }
+    });
+  }
+}
+
+console.log('rules', rules.length, 'units', units, 'obtainable', obtainable.length, 'blacklist', Array.isArray(blacklist) ? blacklist.length : 0);
 console.log('special rule counts', special);
 console.log('normal name rules', nameOnly.size);
 console.log('side unit counts', Object.fromEntries(Object.entries(sideCount).map(([k, v]) => [k, v.size]).filter(([k]) => /^[A-H]/.test(k))));

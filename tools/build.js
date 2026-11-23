@@ -874,7 +874,7 @@ for (const u of itemUnits) {
   }
 }
 
-// ---------- 11. 特殊点位 ----------
+// ---------- 11. 特殊点位与黑名单 ----------
 const botPoints = JSON.parse(fs.readFileSync(BOT_CONFIG, 'utf8'));
 const special = {
   trash: botPoints.trash,
@@ -887,9 +887,20 @@ const special = {
 for (const k of ['trash', 'minecart', 'collector', 'button', 'ready', 'readyButton']) {
   if (!special[k]) throw new Error(`缺少特殊点位 ${k}`);
 }
+const DEFAULT_BLACKLIST = [{ name: 'minecraft:wooden_hoe' }];
+const blacklist = Array.isArray(botPoints.blacklist) ? botPoints.blacklist : DEFAULT_BLACKLIST;
+if (!Array.isArray(blacklist)) throw new Error('blacklist 必须是数组');
+for (let i = 0; i < blacklist.length; i++) {
+  const m = blacklist[i];
+  if (!m || typeof m !== 'object' || Array.isArray(m) || !Object.keys(m).length) {
+    throw new Error(`blacklist[${i}] 不是有效的 Match object`);
+  }
+}
+if (blacklist.length && !special.trash) throw new Error('blacklist 非空但缺少 trash 点位');
 
 const pointsFile = {
   items: rules,
+  blacklist,
   ...special,
 };
 
@@ -1011,7 +1022,7 @@ fs.writeFileSync(path.join(ROOT, 'tools', 'template', 'html-data.json'), JSON.st
 
 console.log(`items ${allItems.length}, obtainable ${obtainable.length}, excluded ${allItems.length - obtainable.length}`);
 console.log(`units ${unitInstances.length} (item ${itemUnits.length}, enchant ${enchantUnits.length}, potion ${potionUnits.length})`);
-console.log(`rules ${rules.length}`);
+console.log(`rules ${rules.length}, blacklist ${blacklist.length}`);
 console.log(`slots used ${unitInstances.length}/880`);
 const usedBySide = {};
 for (const u of unitInstances) usedBySide[`${u.area}-${u.side}`] = (usedBySide[`${u.area}-${u.side}`] || 0) + 1;
