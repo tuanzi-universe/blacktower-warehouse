@@ -59,6 +59,8 @@ python -m http.server 8000
 
 「数据」弹窗可导出/导入 Excel/JSON 并编辑当前视图的黑名单；v1/v2/v3 未提供 blacklist 时默认 `minecraft:wooden_hoe`。
 
+点位文件使用 bot 新版格式（见 `docs/itemsorter-points-spec.md`）：`base` 为必填站位点，`trash` / `minecart` 只含 `yaw` / `pitch` 投掷方向。导入 v1/v2 等旧 `collector` 格式时会自动迁移为 `base`；导出始终输出新格式。Excel「汇总」sheet 中 `trash` / `minecart` 行只填 yaw/pitch，x/y/z 留空。
+
 ## 常用命令
 
 均在项目根目录执行：

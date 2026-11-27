@@ -92,17 +92,71 @@ for (const [k, set] of Object.entries(sideCount)) {
 }
 
 // 黑名单
+const MATCH_KEYS = ['name', 'nameRegex', 'enchantments', 'customName', 'customNameRegex', 'lore', 'loreRegex', 'potionId', 'effects'];
 const blacklist = j.blacklist;
 if (blacklist !== undefined) {
   if (!Array.isArray(blacklist)) problems.push('blacklist 必须是数组');
   else {
-    if (blacklist.length && !j.trash) problems.push('blacklist 非空但缺少 trash 点位');
+    if (blacklist.length && !j.trash) problems.push('blacklist 非空但缺少 trash 投掷方向');
     blacklist.forEach((m, i) => {
       if (!m || typeof m !== 'object' || Array.isArray(m) || !Object.keys(m).length) {
         problems.push(`blacklist[${i}] 不是有效的 Match object`);
+        return;
+      }
+      for (const k of Object.keys(m)) if (!MATCH_KEYS.includes(k)) problems.push(`blacklist[${i}].${k} 是未知字段`);
+      if (!MATCH_KEYS.some(k => k in m)) problems.push(`blacklist[${i}] 缺少匹配条件`);
+      for (const [a, b] of [['name', 'nameRegex'], ['customName', 'customNameRegex'], ['lore', 'loreRegex']]) {
+        if (a in m && b in m) problems.push(`blacklist[${i}] ${a} 与 ${b} 互斥`);
       }
     });
   }
+}
+
+// 特殊点位（bot 新格式：base 站位；trash/minecart 仅 yaw/pitch）
+const ROOT_KEYS = ['items', 'blacklist', 'home', 'trash', 'base', 'minecart', 'button', 'ready', 'readyButton'];
+const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+const hasNums = (o, fields) => fields.every(f => typeof o[f] === 'number' && Number.isFinite(o[f]));
+for (const k of Object.keys(j)) if (!ROOT_KEYS.includes(k)) problems.push(`未知根字段: ${k}`);
+if (j.collector !== undefined) problems.push('旧版 collector 字段存在；应为 base');
+
+function checkSpecial(key, required, fields, optional) {
+  if (j[key] === undefined) {
+    if (required) problems.push(`缺少特殊点位: ${key}`);
+    return;
+  }
+  const p = j[key];
+  if (!isObj(p)) { problems.push(`${key} 必须是 object`); return; }
+  for (const f of Object.keys(p)) {
+    if (!fields.includes(f) && !(optional || []).includes(f)) problems.push(`${key}.${f} 不是允许字段`);
+  }
+  if (!hasNums(p, fields)) problems.push(`${key} 需要数字字段: ${fields.join('/')}`);
+}
+checkSpecial('base', true, ['x', 'y', 'z', 'yaw', 'pitch'], ['label', 'area', 'side']);
+checkSpecial('home', false, ['x', 'y', 'z', 'yaw', 'pitch'], ['label', 'area', 'side']);
+checkSpecial('trash', false, ['yaw', 'pitch'], ['label']);
+checkSpecial('minecart', false, ['yaw', 'pitch'], ['label']);
+checkSpecial('button', false, ['x', 'y', 'z'], ['label']);
+checkSpecial('readyButton', false, ['x', 'y', 'z'], ['label']);
+if (j.ready !== undefined) {
+  const p = j.ready;
+  if (!isObj(p)) problems.push('ready 必须是 object');
+  else {
+    for (const f of Object.keys(p)) if (!['x', 'y', 'z', 'yaw', 'pitch', 'label'].includes(f)) problems.push(`ready.${f} 不是允许字段`);
+    if (!hasNums(p, ['x', 'y', 'z'])) problems.push('ready 需要数字字段: x/y/z');
+    for (const f of ['yaw', 'pitch']) {
+      if (p[f] !== undefined && (typeof p[f] !== 'number' || !Number.isFinite(p[f]))) problems.push(`ready.${f} 必须是数字`);
+    }
+  }
+}
+
+if (isObj(j.base) && isObj(j.button) && hasNums(j.base, ['x', 'y', 'z']) && hasNums(j.button, ['x', 'y', 'z'])) {
+  const bh = Math.hypot(j.button.x - j.base.x, j.button.z - j.base.z);
+  const bv = Math.abs(j.button.y - j.base.y);
+  if (bh > 3 || bv > 2) problems.push(`button 距 base 过远: ${bh.toFixed(2)}/${bv.toFixed(2)}`);
+}
+if (isObj(j.ready) && isObj(j.readyButton) && hasNums(j.ready, ['x', 'z']) && hasNums(j.readyButton, ['x', 'z'])) {
+  const rr = Math.hypot(j.ready.x - j.readyButton.x, j.ready.z - j.readyButton.z);
+  if (rr > 4.5) problems.push(`ready 与 readyButton 距离 ${rr.toFixed(2)} > 4.5`);
 }
 
 console.log('rules', rules.length, 'units', units, 'obtainable', obtainable.length, 'blacklist', Array.isArray(blacklist) ? blacklist.length : 0);
