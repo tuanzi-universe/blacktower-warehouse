@@ -52,7 +52,7 @@ function unitMatchSets(data) {
 function normalizeSpecial(data) {
   const n = IO.normalize(data);
   const out = {};
-  for (const k of ['home', 'trash', 'collector', 'minecart', 'button', 'ready', 'readyButton']) {
+  for (const k of ['home', 'trash', 'base', 'minecart', 'button', 'ready', 'readyButton']) {
     if (n[k]) out[k] = n[k];
   }
   return out;
@@ -343,7 +343,7 @@ function main() {
   {
     const d = JSON.parse(JSON.stringify(base));
     delete d.collector;
-    expectError('missing collector', IO.validate(d), 'collector');
+    expectError('missing base', IO.validate(d), 'base');
   }
   {
     const d = JSON.parse(JSON.stringify(base));

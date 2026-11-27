@@ -438,7 +438,7 @@ D,R,51,COLLECT:decorated_pot,item,收藏,饰纹陶罐,COLLECT:decorated_pot,deco
 D,R,52,COLLECT:sherd,item,收藏,陶片,COLLECT:sherd,angler_pottery_sherd,23,5315,107,-37678,5315.5,115,-37676.5,180,0
 D,R,53,COLLECT:painting,item,收藏,画,COLLECT:painting,painting,1,5316,107,-37678,5316.5,115,-37676.5,0,0
 D,R,54,COLLECT:flower_pot,item,收藏,花盆,COLLECT:flower_pot,flower_pot,1,5317,107,-37678,5317.5,115,-37676.5,180,0
-D,R,55,,,,,,,,5318,107,-37678,5318.5,115,-37676.5,0,0
+D,R,55,CUSTOM:dragon_tear,item,收藏,龙泪,CUSTOM:dragon_tear,beetroot,1,5318,107,-37678,5318.5,115,-37676.5,0,0
 E,L,1,RAW:glass_bottle,item,药水,玻璃瓶,RAW:glass_bottle,glass_bottle,1,5234,107,-37680,5235.5,115,-37679.5,90,0
 E,L,2,POTION:instant_health,potion,药水,药水·瞬间治疗,potion:instant_health,potion,4,5234,107,-37679,5235.5,115,-37678.5,-90,0
 E,L,3,POTION:regeneration,potion,药水,药水·生命恢复,potion:regeneration,potion,4,5234,107,-37678,5235.5,115,-37677.5,90,0

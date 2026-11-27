@@ -308,8 +308,8 @@ aside h3 .bl-count{text-transform:none;letter-spacing:0;font-weight:400;font-siz
   <button class="ghost" id="reset">清除选择</button>
   <button class="ghost" id="searchBtn" disabled>搜索物品</button>
   <button class="ghost" id="dataBtn" disabled title="导入 / 导出点位数据">数据</button>
-  <a class="ghost" id="unmappedLink" href="./unmapped.html" target="_blank" rel="noopener">未收录物品 113</a>
-  <a class="ghost" id="unmappedLink" href="./opened-containers-report.html" target="_blank" rel="noopener">垃圾箱报告</a>
+  <a class="ghost" id="unmappedLink" href="./unmapped.html" target="_blank" rel="noopener">未收录物品 120</a>
+  <a class="ghost" id="openedReportLink" href="./opened-containers-report.html" target="_blank" rel="noopener">垃圾箱报告</a>
   <div class="hint" id="hint">滚轮缩放 · 拖动平移 · 悬停看单元 · 点击看变体</div>
 </div>
 <main>
@@ -1609,10 +1609,10 @@ function drawStation() {
     const rad = (Number(u.p.yaw) || 0) * Math.PI / 180;
     add('line', {x1:x, y1:y, x2:x + Math.sin(rad) * 3.2, y2:y - Math.cos(rad) * 3.2, stroke:'#111', 'stroke-opacity':.45, 'stroke-width':.7}, g);
   }
-  const names = {collector:'接收点', trash:'垃圾点', minecart:'矿车点', ready:'准备点'};
+  const names = {base:'基地', ready:'准备点'};
   for (const [k, cn] of Object.entries(names)) {
     const p = specialPoints[k];
-    if (!p) continue;
+    if (!p || typeof p.x !== 'number') continue;
     const x = px(p.x), y = py(p.z);
     const g = add('g', {}, gStation);
     add('rect', {x:x - 2, y:y - 2, width:4, height:4, fill:'#111', 'fill-opacity':.6, transform:`rotate(45 ${x} ${y})`}, g);
@@ -1802,9 +1802,9 @@ function renderOverview() {
     <h3>特殊点位</h3>
     <div class="special">
       ${specialPoints.home ? `<div><b>家</b> ${fmtP(specialPoints.home)}</div>` : ''}
-      <div><b>接收点</b> ${fmtP(specialPoints.collector)}</div>
-      <div><b>垃圾点</b> ${fmtP(specialPoints.trash)}</div>
-      <div><b>矿车点</b> ${fmtP(specialPoints.minecart)}</div>
+      <div><b>基地</b> ${fmtP(specialPoints.base)}</div>
+      <div><b>垃圾投掷方向</b> ${fmtD(specialPoints.trash)}</div>
+      <div><b>矿车投掷方向</b> ${fmtD(specialPoints.minecart)}</div>
       <div><b>准备点</b> ${fmtP(specialPoints.ready)}</div>
       <div><b>领取按钮</b> ${fmtB(specialPoints.button)}</div>
       <div><b>准备按钮</b> ${fmtB(specialPoints.readyButton)}</div>
@@ -1825,6 +1825,10 @@ function renderOverview() {
 function fmtP(p) {
   if (!p) return '—';
   return `(${Number(p.x).toFixed(2)}, ${p.y}, ${Number(p.z).toFixed(2)}) yaw ${p.yaw ?? '—'}`;
+}
+function fmtD(p) {
+  if (!p) return '—';
+  return `yaw ${p.yaw ?? '—'} / pitch ${p.pitch ?? '—'}`;
 }
 function fmtB(p) {
   if (!p) return '—';
@@ -1955,7 +1959,7 @@ function applyPointsData(data, opts = {}) {
   const keepView = opts.keepView !== false && loadedVer !== null;
   closeBlacklistEditor();
   specialPoints = {
-    home:data.home, collector:data.collector, trash:data.trash, minecart:data.minecart,
+    home:data.home, base:data.base || data.collector, trash:data.trash, minecart:data.minecart,
     button:data.button, ready:data.ready, readyButton:data.readyButton,
   };
   buildUnits(data.items);

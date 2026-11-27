@@ -305,6 +305,7 @@ COLLECT:decorated_pot,D,R,51,item,收藏,饰纹陶罐,COLLECT:decorated_pot,deco
 COLLECT:sherd,D,R,52,item,收藏,陶片,COLLECT:sherd,angler_pottery_sherd,23,5315.5,115,-37676.5,180,0
 COLLECT:painting,D,R,53,item,收藏,画,COLLECT:painting,painting,1,5316.5,115,-37676.5,0,0
 COLLECT:flower_pot,D,R,54,item,收藏,花盆,COLLECT:flower_pot,flower_pot,1,5317.5,115,-37676.5,180,0
+CUSTOM:dragon_tear,D,R,55,item,收藏,龙泪,CUSTOM:dragon_tear,beetroot,1,5318.5,115,-37676.5,0,0
 RAW:glass_bottle,E,L,1,item,药水,玻璃瓶,RAW:glass_bottle,glass_bottle,1,5235.5,115,-37679.5,90,0
 POTION:instant_health,E,L,2,potion,药水,药水·瞬间治疗,potion:instant_health,potion,4,5235.5,115,-37678.5,-90,0
 POTION:regeneration,E,L,3,potion,药水,药水·生命恢复,potion:regeneration,potion,4,5235.5,115,-37677.5,90,0

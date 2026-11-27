@@ -9,19 +9,20 @@
   'use strict';
 
   const AREAS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-  const ROOT_KEYS = ['items', 'blacklist', 'home', 'trash', 'collector', 'minecart', 'button', 'ready', 'readyButton'];
+  const ROOT_KEYS = ['items', 'blacklist', 'home', 'trash', 'base', 'collector', 'minecart', 'button', 'ready', 'readyButton'];
   const RULE_KEYS = ['weight', 'match', 'point'];
   const MATCH_KEYS = ['name', 'nameRegex', 'enchantments', 'customName', 'customNameRegex', 'lore', 'loreRegex', 'potionId', 'effects'];
   const POINT_KEYS = ['x', 'y', 'z', 'yaw', 'pitch', 'label', 'area', 'side'];
   const READY_KEYS = ['x', 'y', 'z', 'yaw', 'pitch', 'label'];
   const BLOCK_KEYS = ['x', 'y', 'z', 'label'];
-  const SPECIAL_ORDER = ['home', 'trash', 'collector', 'minecart', 'button', 'ready', 'readyButton'];
+  const DIRECTION_KEYS = ['yaw', 'pitch', 'label'];
+  const SPECIAL_ORDER = ['home', 'trash', 'base', 'minecart', 'button', 'ready', 'readyButton'];
   const SPECIAL_NAMES = {
-    home: '家', trash: '垃圾点', collector: '接收点', minecart: '矿车点',
+    home: '家', trash: '垃圾投掷方向', base: '基地', minecart: '矿车投掷方向',
     button: '领取按钮', ready: '准备点', readyButton: '准备按钮',
   };
   const SPECIAL_KIND = {
-    home: 'point', trash: 'point', collector: 'point', minecart: 'point',
+    home: 'point', trash: 'direction', base: 'point', minecart: 'direction',
     button: 'block', ready: 'ready', readyButton: 'block',
   };
   const PART_HEADER = ['区', '顺序', '侧', '格位', '单元名', '类型', '代表物', '合并物品', '规则数', '规则(JSON)', '自定义点位(JSON)', '备注'];
@@ -114,6 +115,22 @@
         return { ...data, blacklist: cloneJson(defaultBlacklist) };
       }
       return data;
+    }
+
+    // 旧版：collector 站位 + trash/minecart 带坐标；新版：base + 仅朝向
+    function isLegacySpecial(data) {
+      return (isObject(data.collector) && !isObject(data.base))
+        || (isObject(data.trash) && isNum(data.trash.x))
+        || (isObject(data.minecart) && isNum(data.minecart.x));
+    }
+    function specialOf(data, key) {
+      if (key === 'base') return data.base || data.collector;
+      return data[key];
+    }
+    function specialKind(key, legacy) {
+      if (key === 'collector') return 'point';
+      if (legacy && (key === 'trash' || key === 'minecart')) return 'point';
+      return SPECIAL_KIND[key];
     }
 
     function cnOf(id) { return itemCn[id] || id; }
@@ -223,13 +240,20 @@
       }
 
       function checkPoint(p, path, kind) {
-        const allowed = kind === 'block' ? BLOCK_KEYS : kind === 'ready' ? READY_KEYS : POINT_KEYS;
+        const allowed = kind === 'block' ? BLOCK_KEYS
+          : kind === 'ready' ? READY_KEYS
+          : kind === 'direction' ? DIRECTION_KEYS
+          : POINT_KEYS;
         for (const k of Object.keys(p)) if (!allowed.includes(k)) err(`${path}.${k}`, `未知点位字段 "${k}"`);
-        for (const k of ['x', 'y', 'z']) if (!isNum(p[k])) err(`${path}.${k}`, `${k} 必须是有限数字`);
-        if (kind === 'point') {
+        if (kind === 'direction') {
           for (const k of ['yaw', 'pitch']) if (!isNum(p[k])) err(`${path}.${k}`, `${k} 必须是有限数字`);
-        } else if (kind === 'ready') {
-          for (const k of ['yaw', 'pitch']) if (has(p, k) && !isNum(p[k])) err(`${path}.${k}`, `${k} 必须是有限数字`);
+        } else {
+          for (const k of ['x', 'y', 'z']) if (!isNum(p[k])) err(`${path}.${k}`, `${k} 必须是有限数字`);
+          if (kind === 'point') {
+            for (const k of ['yaw', 'pitch']) if (!isNum(p[k])) err(`${path}.${k}`, `${k} 必须是有限数字`);
+          } else if (kind === 'ready') {
+            for (const k of ['yaw', 'pitch']) if (has(p, k) && !isNum(p[k])) err(`${path}.${k}`, `${k} 必须是有限数字`);
+          }
         }
         if (has(p, 'label') && typeof p.label !== 'string') err(`${path}.label`, 'label 必须是字符串');
         if (kind === 'point') {
@@ -285,24 +309,33 @@
             });
           }
         }
-        if (has(m, 'potionId') && (!Number.isInteger(m.potionId) || m.potionId < 0)) {
-          err(`${path}.potionId`, 'potionId 必须是 ≥0 的整数');
+        if (has(m, 'potionId')) {
+          const ok = (Number.isInteger(m.potionId) && m.potionId >= 0)
+            || (typeof m.potionId === 'string' && m.potionId.trim() !== '');
+          if (!ok) err(`${path}.potionId`, 'potionId 必须是 ≥0 的整数或非空类型名');
         }
         if (!has(m, 'name') && !has(m, 'nameRegex')) {
           warn(path, '没有 name/nameRegex 的规则可能匹配任意物品');
         }
       }
 
-      for (const [key, kind] of Object.entries(SPECIAL_KIND)) {
+      const legacy = isLegacySpecial(data);
+      const specialKeys = has(data, 'collector') ? [...SPECIAL_ORDER, 'collector'] : SPECIAL_ORDER;
+      for (const key of specialKeys) {
+        const kind = specialKind(key, legacy);
         if (!has(data, key)) {
-          if (key === 'collector' || key === 'minecart') err(key, `缺少必填点位 ${key}`);
-          else if (key === 'trash' || key === 'button' || key === 'ready' || key === 'readyButton') {
+          if (key === 'base') {
+            if (!has(data, 'collector')) err('base', '缺少必填点位 base');
+          } else if (key === 'trash' || key === 'minecart' || key === 'button' || key === 'ready' || key === 'readyButton') {
             warn(key, `未提供 ${key} 点位`);
           }
           continue;
         }
         if (!isObject(data[key])) err(key, `${key} 必须是 object`);
         else checkPoint(data[key], key, kind);
+      }
+      if (has(data, 'base') && has(data, 'collector')) {
+        err('collector', 'collector 已更名为 base，不能同时提供');
       }
 
       const matches = new Map();
@@ -401,12 +434,12 @@
         }
       }
 
-      const collector = data.collector, button = data.button;
-      if (isObject(collector) && isObject(button) && isNum(collector.x) && isNum(collector.y) && isNum(collector.z)
+      const basePoint = data.base || data.collector, button = data.button;
+      if (isObject(basePoint) && isObject(button) && isNum(basePoint.x) && isNum(basePoint.y) && isNum(basePoint.z)
         && isNum(button.x) && isNum(button.y) && isNum(button.z)) {
-        const bh = Math.hypot(button.x - collector.x, button.z - collector.z);
-        const bv = Math.abs(button.y - collector.y);
-        if (bh > 3 || bv > 2) warn('button', `button 与 collector 距离过远（水平 ${bh.toFixed(2)} / 垂直 ${bv.toFixed(2)}）`);
+        const bh = Math.hypot(button.x - basePoint.x, button.z - basePoint.z);
+        const bv = Math.abs(button.y - basePoint.y);
+        if (bh > 3 || bv > 2) warn('button', `button 与 base 距离过远（水平 ${bh.toFixed(2)} / 垂直 ${bv.toFixed(2)}）`);
       }
       const ready = data.ready, readyButton = data.readyButton;
       if (isObject(ready) && isObject(readyButton) && isNum(ready.x) && isNum(ready.z) && isNum(readyButton.x) && isNum(readyButton.z)) {
@@ -422,7 +455,7 @@
 
     function validateBlacklist(list, basePath = 'blacklist') {
       const stub = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 };
-      const data = { items: [], blacklist: list, trash: stub, collector: stub, minecart: stub };
+      const data = { items: [], blacklist: list, trash: { yaw: 0, pitch: 0 }, base: stub, minecart: { yaw: 0, pitch: 0 } };
       const v = validate(data);
       const inPath = e => {
         const p = String(e.path || '');
@@ -475,6 +508,11 @@
       return o;
     }
     function normalizePoint(p, kind) {
+      if (kind === 'direction') {
+        const o = { yaw: p.yaw, pitch: p.pitch };
+        if (has(p, 'label')) o.label = p.label;
+        return o;
+      }
       const o = { x: p.x, y: p.y, z: p.z };
       if (kind === 'point') { o.yaw = p.yaw; o.pitch = p.pitch; }
       else if (kind === 'ready') {
@@ -499,8 +537,10 @@
       });
       out.blacklist = (Array.isArray(data.blacklist) ? data.blacklist : []).map(normalizeMatch);
       for (const key of SPECIAL_ORDER) {
-        if (!has(data, key)) continue;
-        out[key] = normalizePoint(data[key], SPECIAL_KIND[key]);
+        const value = specialOf(data, key);
+        if (!value) continue;
+        const kind = (key === 'trash' || key === 'minecart') ? 'direction' : SPECIAL_KIND[key];
+        out[key] = normalizePoint(value, kind);
       }
       return out;
     }
@@ -621,10 +661,14 @@
         ['键', '中文名', 'x', 'y', 'z', 'yaw', 'pitch', 'label', 'area', 'side'],
       ];
       for (const key of SPECIAL_ORDER) {
-        const p = data[key];
+        const p = specialOf(data, key);
         if (!p) continue;
+        const kind = (key === 'trash' || key === 'minecart') ? 'direction' : SPECIAL_KIND[key];
         rows.push([
-          key, SPECIAL_NAMES[key], p.x, p.y, p.z,
+          key, SPECIAL_NAMES[key],
+          kind === 'direction' ? '' : p.x,
+          kind === 'direction' ? '' : p.y,
+          kind === 'direction' ? '' : p.z,
           has(p, 'yaw') ? p.yaw : '', has(p, 'pitch') ? p.pitch : '',
           p.label || '', p.area || '', p.side || '',
         ]);
@@ -813,6 +857,21 @@
           errors.push({ path: `汇总!第${i + 1}行`, message: `特殊点位 ${key} 重复` });
           continue;
         }
+        const kind = (key === 'trash' || key === 'minecart') ? 'direction' : SPECIAL_KIND[key];
+        if (kind === 'direction') {
+          const yaw = map.yaw !== undefined ? toNum(row[map.yaw]) : NaN;
+          const pitch = map.pitch !== undefined ? toNum(row[map.pitch]) : NaN;
+          if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) {
+            errors.push({ path: `汇总!第${i + 1}行`, message: `${key} 的 yaw/pitch 必须是数字` });
+            continue;
+          }
+          const p = { yaw, pitch };
+          const label = map.label !== undefined ? text(row[map.label]) : '';
+          if (label) p.label = label;
+          special[key] = p;
+          specialRows[key] = i + 1;
+          continue;
+        }
         const x = toNum(row[map.x]), y = toNum(row[map.y]), z = toNum(row[map.z]);
         if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
           errors.push({ path: `汇总!第${i + 1}行`, message: `${key} 的 x/y/z 必须是数字` });
@@ -894,8 +953,9 @@
         const potionRaw = get('药水ID');
         if (potionRaw) {
           const n = toInt(potionRaw);
-          if (n === null) { errors.push({ path, message: `药水ID 必须是 ≥0 的整数（当前 "${potionRaw}"）` }); continue; }
-          m.potionId = n;
+          if (n !== null) m.potionId = n;
+          else if (/^[A-Za-z0-9_:]+$/.test(potionRaw)) m.potionId = potionRaw;
+          else { errors.push({ path, message: `药水ID 必须是 ≥0 的整数或类型名（当前 "${potionRaw}"）` }); continue; }
         }
         const effRaw = get('效果(JSON)');
         if (effRaw) {

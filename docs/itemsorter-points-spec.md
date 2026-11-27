@@ -24,25 +24,25 @@
 
 ```text
 {
-  "items": Rule[],                 // 可省略，缺省 []
+  "items": Rule[],                 // 可省略，缺省 []；命中 source 对应矿车物品的规则被忽略
   "blacklist"?: Match[],           // 可省略，缺省 []；点按钮前必须清空手持物品的黑名单
   "home"?: Point,                  // homeMode=walk 时必填
-  "trash"?: Point,                 // 可选；blacklist 非空时必填
-  "collector": Point,              // 必填
-  "minecart": Point,               // 必填（当前仅解析保留，不参与行程）
+  "trash"?: Direction,             // 可选；blacklist 非空时必填；仅 yaw/pitch
+  "base": Point,                   // 必填；基地（行程终点 + 原地投掷站位）
+  "minecart"?: Direction,          // source 为矿车时必填；仅 yaw/pitch
   "button"?: BlockPoint,           // acquireMode=button 时必填
   "ready"?: ReadyPoint,            // readyAction.enabled=true 时必填
   "readyButton"?: BlockPoint       // readyAction.enabled=true 时必填
 }
 ```
 
-`items`、`blacklist`、`home`、`trash`、`button`、`ready`、`readyButton` 可省略；`collector` 与 `minecart` 永远必填。省略 `items` / `blacklist` 等价于空数组。
+`items`、`blacklist`、`home`、`trash`、`minecart`、`button`、`ready`、`readyButton` 可省略；`base` 永远必填。省略 `items` / `blacklist` 等价于空数组。
 
 ## 3. 基础数据类型
 
 ### 3.1 `Point`：站位点位
 
-用于 `items[].point`、`home`、`trash`、`collector`、`minecart`。
+用于 `items[].point`、`home`、`base`。
 
 | 字段    | 类型   | 必填 | 规则                                                   |
 | ------- | ------ | ---- | ------------------------------------------------------ |
@@ -59,7 +59,19 @@
 
 `yaw` / `pitch` 原样按度转换为弧度后传给 `bot.look`。运行时不校验范围；建议统一归一化到 `[-180, 180]` 或 `[0, 360)`，并在生成器内部保持一致。
 
-### 3.2 `BlockPoint`：方块坐标
+### 3.2 `Direction`：投掷方向
+
+用于 `trash`、`minecart`，**只有朝向，没有坐标**。
+
+| 字段    | 类型   | 必填 | 规则                 |
+| ------- | ------ | ---- | -------------------- |
+| `yaw`   | number | 是   | 水平朝向，单位为度   |
+| `pitch` | number | 是   | 俯仰角，单位为度     |
+| `label` | string | 否   | 仅用于日志与人工备注 |
+
+投掷方向**不产生行走**：机器人只在 `base` 站位原地转向该角度投掷。因此朝向的有效性以 base 站位为准——生成器应站在 `base` 坐标上推算朝向（例如指向垃圾井/矿车接收水流入口），而不是从其他站位推算。
+
+### 3.3 `BlockPoint`：方块坐标
 
 用于 `button`、`readyButton`。
 
@@ -72,7 +84,7 @@
 
 `BlockPoint` 没有 `yaw` / `pitch`。坐标应为实际可交互方块的整数坐标（例如按钮、拉杆所在方块），运行时用 `bot.blockAt` 读取并按方块交互。
 
-### 3.3 `ReadyPoint`：准备出发点
+### 3.4 `ReadyPoint`：准备出发点
 
 用于 `ready`，与 `Point` 相同，但 `yaw` / `pitch` 可省略。
 
@@ -105,17 +117,17 @@
 
 ### 4.2 `Match`
 
-| 字段              | 类型        | 说明                                       |
-| ----------------- | ----------- | ------------------------------------------ |
-| `name`            | string      | 精确物品 ID，可带或不带 `minecraft:` 前缀  |
-| `nameRegex`       | string      | 物品 ID 正则，作用于 `minecraft:<物品 ID>` |
-| `enchantments`    | object      | 附魔名或数字 ID → **精确等级**             |
-| `customName`      | string      | 自定义名称精确匹配（纯文本）               |
-| `customNameRegex` | string      | 自定义名称正则（纯文本）                   |
-| `lore`            | string      | lore 任意一行精确匹配                      |
-| `loreRegex`       | string      | lore 任意一行正则匹配                      |
-| `potionId`        | integer ≥ 0 | `potion_contents.potionId` 精确匹配        |
-| `effects`         | array       | 药水自定义效果，只判断是否存在             |
+| 字段              | 类型                  | 说明                                                       |
+| ----------------- | --------------------- | ---------------------------------------------------------- |
+| `name`            | string                | 精确物品 ID，可带或不带 `minecraft:` 前缀                  |
+| `nameRegex`       | string                | 物品 ID 正则，作用于 `minecraft:<物品 ID>`                 |
+| `enchantments`    | object                | 附魔名或数字 ID → **精确等级**                             |
+| `customName`      | string                | 自定义名称精确匹配（纯文本）                               |
+| `customNameRegex` | string                | 自定义名称正则（纯文本）                                   |
+| `lore`            | string                | lore 任意一行精确匹配                                      |
+| `loreRegex`       | string                | lore 任意一行正则匹配                                      |
+| `potionId`        | integer ≥ 0 或 string | 药水类型精确匹配；string 为类型名，integer 为注册表数字 ID |
+| `effects`         | array                 | 药水效果（内置 + 自定义），只判断是否存在                  |
 
 约束：
 
@@ -127,6 +139,7 @@
    - `lore` 与 `loreRegex`
 4. `enchantments` 至少有一个键，值必须是 ≥ 1 的整数。
 5. `effects` 至少有一个元素；元素为字符串或 ≥ 0 的整数。
+6. `potionId` 为 ≥ 0 的整数，或非空字符串（类型名，详见 4.4）。
 
 ### 4.3 `enchantments` 的对象形式
 
@@ -141,37 +154,56 @@
 - 名称归一化：去掉 `minecraft:` 前缀、转小写、连续非字母数字字符转下划线。推荐生成小写 snake_case、不带命名空间的名称。
 - 数字 ID 随 Minecraft 版本变化；生成器应优先使用名称。
 
-### 4.4 `effects` 的数组形式
+### 4.4 `potionId` 的两种形式
+
+```json
+{ "potionId": "strong_healing" }
+```
+
+```json
+{ "potionId": 23 }
+```
+
+- 字符串形式（推荐）：药水类型名，如 `healing`、`strong_healing`、`long_regeneration`、`turtle_master`。bot 通过**代码内置的版本药水注册表**（该注册表不在登录时下发，取自官方 server.jar 字节码的注册顺序，见 `potion-registry.ts`）把 `potion_contents.potionId`（数字）反查为类型名后精确比较；名称归一化规则与附魔相同。该注册表数字 ID 没有公开对照表，**生成器应优先输出类型名，不要猜测数字**。
+- 数字形式：`potion_contents.potionId`（注册表数字 ID，旧数据里的 `potion_id` / `potion` 数字值也兼容）。必须来自实测（如 debug 日志的未映射物品组件信息），不要凭记忆填写。
+- 服务器未下发药水注册表时，字符串形式不命中（运行时有告警），数字形式不受影响。
+
+### 4.5 `effects` 的数组形式
 
 ```json
 { "effects": ["speed", "water_breathing"] }
 ```
 
-- 只匹配 `potion_contents` 的自定义效果（`customEffects`），旧数据回退 NBT `CustomPotionEffects`。
+- 匹配药水携带的效果，来源有两处，合并后只判断存在：
+  - **内置效果**：普通酿造药水的效果由药水类型（`potionId`）决定，bot 经版本内置注册表解析类型名后按内置对照表展开（如 `healing` → `instant_health`、`turtle_master` → `slowness` + `resistance` + `weakness`、`long_`/`strong_` 变体剥前缀后取基础效果）。注册表缺失或类型不在内置表中时不展开（有告警）。
+  - **自定义效果**：`potion_contents.customEffects`（`custom_effects` / `effects` 兼容），旧数据回退 NBT `CustomPotionEffects`。
 - **只判断存在，不比较等级与时长**；列出的效果必须全部存在，允许多余效果。
 - 元素可以是效果名或数字 ID；效果名归一化规则与附魔相同。
-- 标准药水通常只有 `potionId`、没有 `customEffects`，因此 `effects` 主要用于自定义药水。
+- 标准药水的效果几乎全部来自类型展开，因此 `effects` 同样适用于普通药水；`customEffects` 只承载指令/数据包附加的效果。
 
 ## 5. 与 `config.yaml` 联动的条件必填
 
 JSON Schema 无法表达“取决于 YAML 配置”的必填关系，生成器必须在写文件前按目标配置检查：
 
-| YAML 配置                                       | JSON 必须包含            | 额外校验                                                                |
-| ----------------------------------------------- | ------------------------ | ----------------------------------------------------------------------- |
-| `plugins.itemsorter.homeMode: walk`             | `home`                   | 无                                                                      |
-| `plugins.itemsorter.homeMode: teleport`         | 无                       | `home` 可省略；即使存在也不会被读取                                     |
-| `plugins.itemsorter.acquireMode: button`        | `button`                 | 与 `collector` 水平距离 ≤ 3 格，且 `abs(button.y - collector.y)` ≤ 2 格 |
-| `plugins.itemsorter.acquireMode: auto`          | 无                       | `button` 可省略                                                         |
-| `plugins.itemsorter.readyAction.enabled: true`  | `ready` 和 `readyButton` | `ready` 的 `yaw` / `pitch` 可省略，默认 `0`                             |
-| `plugins.itemsorter.readyAction.enabled: false` | 无                       | 两个点都可省略                                                          |
-| `blacklist` 非空                                | `trash`                  | 黑名单物品投掷目标，缺 `trash` 时插件初始化失败                         |
-| 任意配置                                        | `collector`、`minecart`  | 永远必填                                                                |
+| YAML 配置                                                   | JSON 必须包含            | 额外校验                                                      |
+| ----------------------------------------------------------- | ------------------------ | ------------------------------------------------------------- |
+| `plugins.itemsorter.homeMode: walk`                         | `home`                   | 无                                                            |
+| `plugins.itemsorter.homeMode: teleport`                     | 无                       | `home` 可省略；即使存在也不会被读取                           |
+| `plugins.itemsorter.acquireMode: button`                    | `button`                 | 与 `base` 水平距离 ≤ 3 格，且 `abs(button.y - base.y)` ≤ 2 格 |
+| `plugins.itemsorter.acquireMode: auto`                      | 无                       | `button` 可省略                                               |
+| `plugins.itemsorter.source: chest_minecart/hopper_minecart` | `minecart`               | 矿车来源：缺 `minecart` 时插件初始化失败                      |
+| `plugins.itemsorter.source: water`                          | 无                       | `minecart` 可省略；即使存在也不会被读取                       |
+| `plugins.itemsorter.readyAction.enabled: true`              | `ready` 和 `readyButton` | `ready` 的 `yaw` / `pitch` 可省略，默认 `0`                   |
+| `plugins.itemsorter.readyAction.enabled: false`             | 无                       | 两个点都可省略                                                |
+| `blacklist` 非空                                            | `trash`                  | 黑名单投掷方向，缺 `trash` 时插件初始化失败                   |
+| 任意配置                                                    | `base`                   | 永远必填                                                      |
 
 补充建议：
 
-- 无法确定目标配置时，**尽量输出所有点位**；多输出的 `home` / `button` / `ready` / `readyButton` 在不相关模式下会被忽略，不会导致加载失败（`button` 的距离校验也只在 `button` 模式执行）。
+- 无法确定目标配置时，**尽量输出所有点位**；多输出的 `home` / `trash` / `minecart` / `button` / `ready` / `readyButton` 在不相关模式下会被忽略，不会导致加载失败（`button` 的距离校验也只在 `button` 模式执行）。
 - `ready` 与 `readyButton` 建议保持直线距离 ≤ 4.5 格。超出不会导致加载失败，但运行时不会点击按钮，只记录警告。
-- `collector` 首次分拣前会校验 bot 与它的水平距离不超过 `maxCollectorDistance`（默认 200），并做一次不移动的可达性探测。生成器若知道出生点/接收点，建议提前校验距离。
+- `base` 首次分拣前会校验 bot 与它的水平距离不超过 `maxCollectorDistance`（默认 200），并做一次不移动的可达性探测。生成器若知道出生点/基地，建议提前校验距离。
+- `source` 为矿车时，命中对应矿车物品（chest_minecart / hopper_minecart）的 `items` 规则被忽略（改为投 `minecart` 朝向）：生成器不应为矿车物品输出规则，其余物品规则照常生成。
 
 ## 6. 匹配语义（生成器必须遵守）
 
@@ -194,8 +226,8 @@ JSON Schema 无法表达“取决于 YAML 配置”的必填关系，生成器�
 | `customName`         | 去格式代码并 `trim` 后的纯文本         | 输出纯文本；不要写 `§` 颜色代码                             |
 | `customNameRegex`    | 同上                                   | 对纯文本做正则测试                                          |
 | `lore` / `loreRegex` | 每一行去格式代码并 `trim` 后的纯文本   | 任意一行满足即可                                            |
-| `potionId`           | 服务端药水注册表数字 ID                | 必须与目标 MC/服务端版本一致                                |
-| `effects`            | `customEffects` 中的效果名称或数字 ID  | 名称优先；只判断存在                                        |
+| `potionId`           | 药水类型名或注册表数字 ID              | 优先输出类型名（如 `strong_healing`）；数字 ID 仅限实测值   |
+| `effects`            | 效果名称或数字 ID                      | 名称优先；只判断存在；对普通药水同样生效（内置效果展开）    |
 
 `name` 匹配只去掉一个前导 `minecraft:`，其余部分区分大小写。生成器应统一输出**小写、带命名空间**的物品 ID，例如 `minecraft:enchanted_book`；不要输出 `Enchanted_Book` 或展示名。
 
@@ -216,23 +248,24 @@ JSON Schema 无法表达“取决于 YAML 配置”的必填关系，生成器�
 
 ### 6.5 版本相关字段
 
-- `potionId`、附魔数字 ID、效果数字 ID 都属于目标版本的注册表数据，可能随 MC 或服务端升级变化。
+- `potionId` 数字形式、附魔数字 ID、效果数字 ID 都属于目标版本的注册表数据，可能随 MC 或服务端升级变化；`potionId` 字符串形式与效果/附魔名称跨版本稳定。
 - 生成器必须知道目标 Minecraft 版本；无法解析时，优先使用名称，不要猜测数字 ID。
-- 标准药水通常只带 `potionId`；自定义药水才带 `customEffects`。
+- 标准药水只带 `potionId`、不带 `customEffects`；其效果由 bot 经药水注册表按类型展开，因此按效果分拣普通药水直接写 `effects` 即可。
 
 ## 7. 点位与行程语义
 
 - **停靠点合并**：两个点位相同当且仅当 `x`、`y`、`z`、`yaw`、`pitch` 五项全部相同。多项规则指向同一点位会合并为一次停靠、一起投掷。
 - **朝向不同即不同点**：坐标相同但 `yaw` / `pitch` 不同会被视为两个停靠点，生成器应避免无意的重复。
 - **`area` / `side`**：只影响行程排序，不参与匹配。建议同一实际点位使用一致的 `area` / `side`；缺省值会归入空字符串组。
-- **行程顺序**：有未映射物品且配置了 `trash` 时，`trash` 第一站；随后按 `area` 分组、同区内按 `side` 连续访问，区内用最近邻 + 2-opt；`collector` 永远是最后一站。
-- **未映射物品**：没有任何规则命中的物品会按物品 ID 分组。配置了 `trash` 时投入垃圾点；未配置时只记录警告并留在背包。生成器若不能保证覆盖所有可能物品，建议始终输出 `trash`。
-- **`collector`**：接收点/回收点，必填。首次分拣前会做距离与可达性校验。
+- **行程顺序**（`source: water`）：按 `area` 分组、同区内按 `side` 连续访问，区内用最近邻 + 2-opt；`base` 永远是最后一站。垃圾不产生停靠点。
+- **未映射物品**：没有任何规则命中的物品会按物品 ID 分组，在离开 `base` 出发前原地朝 `trash` 朝向投掷（不进入行程停靠点）；未配置 `trash` 时只记录警告并留在背包。生成器若不能保证覆盖所有可能物品，建议始终输出 `trash`。
+- **`base`**：基地，必填。行程终点、领取按钮附近站位、所有原地投掷（trash/minecart 朝向）的站位。首次分拣前会做距离与可达性校验。
+- **`trash` / `minecart`**：投掷方向（仅 `yaw`/`pitch`），不产生行走；机器人只在 `base` 站位原地转向投掷。`trash` 用于未映射与黑名单物品；`minecart` 用于 `source` 为矿车时领取到的对应矿车物品（矿车来源）。
+- **矿车来源**（`source` 为矿车）：领取到的是对应类型的矿车物品，该类物品**不参与 `items` 规则**（命中它们的规则被忽略），且在**每轮出发前与每次基地停留领取后**就在 base 原地朝 `minecart` 朝向投出，不进入行程停靠点。`acquireMode: button` 时每次按键前也先清仓（黑名单/未映射 → `trash` 朝向，矿车物品 → `minecart` 朝向）；领取与 water 共用同一循环与终止条件（空槽位达标结束，无拾取休眠重试）。其余物品照常按规则分拣。
 - **`home`**：仅在 `homeMode: walk` 时作为登录后的起点被寻路访问；`teleport` 模式使用 `homeName`，不读取该点位。
-- **`minecart`**：必填但当前未参与行程，属于保留字段。没有实际矿车点时，可填写与 `collector` 相同的合法点位。
-- **`button`**：`acquireMode: button` 时使用，必须是真实可交互方块；与 `collector` 的水平距离 ≤ 3、垂直距离 ≤ 2，否则插件初始化失败。
-- **`blacklist`**：任意一条 `Match` 命中（OR）即算黑名单物品。每次点击 `button` / `readyButton` 前检查手持物品，命中则先到 `trash` 投掷清空后再按键；按下按钮前命中的手持物品直接进垃圾点，即使它同时命中某条 `items` 规则。非手持的黑名单物品仍走正常分拣流程。`blacklist` 非空必须同时输出 `trash`；没有任何按钮流程（`acquireMode` 非 `button` 且 `readyAction` 关闭）时黑名单不会生效。
-- **`ready` / `readyButton`**：`readyAction.enabled` 时使用。每轮从 `collector` 出发前先走到 `ready`、转向，再点击 `readyButton`；点击成功后等待 `readyAction.delayTicks` 再开始分拣。
+- **`button`**：`acquireMode: button` 时使用，必须是真实可交互方块；与 `base` 的水平距离 ≤ 3、垂直距离 ≤ 2，否则插件初始化失败。
+- **`blacklist`**：任意一条 `Match` 命中（OR）即算黑名单物品。每轮出发前、每次点击 `button` 前、按 `readyButton` 前与 base 停靠点兜底，都会在 `base` 原地朝 `trash` 朝向投掷所有命中堆叠（连同未映射物品，不再行走）；即使命中物品同时命中某条 `items` 规则也会被投出。`blacklist` 非空必须同时输出 `trash`；没有任何按钮流程（`acquireMode` 非 `button` 且 `readyAction` 关闭）时按键前的清仓不会发生，出发前与停靠点清仓照常生效。
+- **`ready` / `readyButton`**：`readyAction.enabled` 时使用。每轮从 `base` 出发前先原地清理垃圾（黑名单与未映射物品），再走到 `ready`、转向，点击 `readyButton`；点击成功后等待 `readyAction.delayTicks` 再开始分拣。
 - **可站立性**：`Point` 的 `x` / `z` 必须是 bot 能到达并站立的位置。生成器若从建筑方块坐标推导，需要转换为脚部站位，不能直接使用方块中心或方块内部坐标。
 
 ## 8. 推荐生成流程
@@ -241,21 +274,21 @@ JSON Schema 无法表达“取决于 YAML 配置”的必填关系，生成器�
 
 生成器至少需要：
 
-1. 目标 `config.yaml` 中的 `homeMode`、`acquireMode`、`readyAction.enabled`；
-2. 所有空间点位（`home` / `trash` / `collector` / `minecart` / `button` / `ready` / `readyButton`）；
-3. 有序规则列表：匹配条件、投放点位、可选显式 `weight`、可选 `area` / `side`；
+1. 目标 `config.yaml` 中的 `homeMode`、`acquireMode`、`source`、`readyAction.enabled`；
+2. 所有空间点位（`home` / `trash` / `base` / `minecart` / `button` / `ready` / `readyButton`）；
+3. 有序规则列表：匹配条件、投放点位、可选显式 `weight`、可选 `area` / `side`（`source` 为矿车时不需要）；
 4. 目标 Minecraft 版本（用于解析物品、附魔、药水 ID）。
 
 ### 8.2 归一化
 
-| 数据          | 归一化动作                                                           |
-| ------------- | -------------------------------------------------------------------- |
-| 物品 ID       | 转小写，统一为 `minecraft:<snake_case>`；不要使用展示名              |
-| 附魔/效果名   | 去 `minecraft:`、转小写、非字母数字转 `_`，输出 snake_case           |
-| 自定义名称    | 去掉 `§` 格式代码，`trim`                                            |
-| lore 每一行   | 去掉 `§` 格式代码，`trim`                                            |
-| `area`/`side` | `trim`；空字符串可省略                                               |
-| 数值          | 确保 `weight` / `potionId` / 附魔等级 / 效果 ID 为整数，且满足最小值 |
+| 数据          | 归一化动作                                                                                                 |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| 物品 ID       | 转小写，统一为 `minecraft:<snake_case>`；不要使用展示名                                                    |
+| 附魔/效果名   | 去 `minecraft:`、转小写、非字母数字转 `_`，输出 snake_case                                                 |
+| 自定义名称    | 去掉 `§` 格式代码，`trim`                                                                                  |
+| lore 每一行   | 去掉 `§` 格式代码，`trim`                                                                                  |
+| `area`/`side` | `trim`；空字符串可省略                                                                                     |
+| 数值          | 确保 `weight` / `potionId`（数字形式）/ 附魔等级 / 效果 ID 为整数，且满足最小值；`potionId` 字符串形式非空 |
 
 ### 8.3 排序
 
@@ -289,29 +322,33 @@ JSON Schema 无法表达“取决于 YAML 配置”的必填关系，生成器�
 - [ ] 附录 A 的 JSON Schema 校验通过。
 - [ ] 只包含本文列出的字段；没有 `version` / 注释 / `NaN` / `Infinity`。
 - [ ] `items` 是数组；不是旧版「物品名 → 点位」对象。
+- [ ] 不存在旧版点位字段：没有 `collector`；`trash` / `minecart` 只含 `yaw` / `pitch`（及 `label`），没有 `x` / `y` / `z`。
 - [ ] 每条规则都有非空 `match` 和 `Point`；`Point` 包含 `x` / `y` / `z` / `yaw` / `pitch`。
 - [ ] `match` 中互斥字段没有同时出现；`enchantments` / `effects` 非空。
 - [ ] 所有 `name` 为小写物品 ID；`nameRegex` 包含 `minecraft:` 前缀且能被 JS 编译。
-- [ ] 按第 5 节补齐 `home` / `button` / `ready` / `readyButton`。
-- [ ] `button` 与 `collector` 的距离满足水平 ≤ 3、垂直 ≤ 2。
-- [ ] 输出 `blacklist` 时已同时输出 `trash`。
+- [ ] 按第 5 节补齐 `home` / `button` / `ready` / `readyButton` / `minecart`。
+- [ ] `button` 与 `base` 的距离满足水平 ≤ 3、垂直 ≤ 2。
+- [ ] 输出 `blacklist` 时已同时输出 `trash`；`source` 为矿车时已输出 `minecart`。
+- [ ] `trash` / `minecart` 朝向是从 `base` 站位推算的（原地投掷的有效性以 base 为准）。
 - [ ] 不存在完全重复的 `match`；特例规则的优先级高于通用规则。
 - [ ] 未配置 `trash` 时，生成器已明确接受“未映射物品会留在背包”的后果。
 - [ ] 文件为 UTF-8 无 BOM，且已通过原子写入落盘。
 
 运行时错误对照：
 
-| 运行时错误（前缀）                                     | 生成器应检查的内容                     |
-| ------------------------------------------------------ | -------------------------------------- |
-| `无法读取 itemsorter 点位文件`                         | 路径、文件是否存在、权限               |
-| `itemsorter 点位文件不是合法 JSON`                     | BOM、注释、尾随逗号、语法              |
-| `itemsorter 点位文件 items 必须是数组`                 | 是否仍输出旧对象格式                   |
-| `itemsorter 点位文件校验失败（...）：<路径>`           | 按字段路径修正类型、未知字段、互斥字段 |
-| `配置为 homeMode=walk，但点位文件缺少 home 点位`       | 补齐 `home`                            |
-| `配置为 acquireMode=button，但...缺少 button 点位`     | 补齐 `button`                          |
-| `按钮距离 collector 过远`                              | 调整 `button` 坐标                     |
-| `启用了 readyAction，但...缺少 ready/readyButton 点位` | 补齐两个准备点位                       |
-| `配置了 blacklist，但...缺少 trash 点位`               | 补齐 `trash`                           |
+| 运行时错误（前缀）                                     | 生成器应检查的内容                                   |
+| ------------------------------------------------------ | ---------------------------------------------------- |
+| `无法读取 itemsorter 点位文件`                         | 路径、文件是否存在、权限                             |
+| `itemsorter 点位文件不是合法 JSON`                     | BOM、注释、尾随逗号、语法                            |
+| `itemsorter 点位文件 items 必须是数组`                 | 是否仍输出旧对象格式                                 |
+| `itemsorter 点位文件是旧版点位格式`                    | 是否仍输出 `collector` 或带坐标的 `trash`/`minecart` |
+| `itemsorter 点位文件校验失败（...）：<路径>`           | 按字段路径修正类型、未知字段、互斥字段               |
+| `配置为 homeMode=walk，但点位文件缺少 home 点位`       | 补齐 `home`                                          |
+| `配置为 acquireMode=button，但...缺少 button 点位`     | 补齐 `button`                                        |
+| `按钮距离 base 过远`                                   | 调整 `button` 坐标                                   |
+| `启用了 readyAction，但...缺少 ready/readyButton 点位` | 补齐两个准备点位                                     |
+| `配置了 blacklist，但...缺少 trash 投掷朝向`           | 补齐 `trash`                                         |
+| `来源配置为矿车，但...缺少 minecart 投掷朝向`          | 补齐 `minecart`                                      |
 
 ## 10. 完整示例
 
@@ -371,7 +408,7 @@ plugins:
       }
     },
     {
-      "match": { "name": "minecraft:potion", "potionId": 23 },
+      "match": { "name": "minecraft:potion", "potionId": "strong_healing" },
       "point": {
         "x": 106,
         "y": 64,
@@ -389,9 +426,9 @@ plugins:
     { "name": "minecraft:water_bucket" },
     { "nameRegex": "^minecraft:.*_shulker_box$" }
   ],
-  "trash": { "x": 108, "y": 64, "z": 100, "yaw": 180, "pitch": 0, "label": "垃圾点" },
-  "collector": { "x": 100, "y": 64, "z": 110, "yaw": 180, "pitch": 0, "label": "接收点" },
-  "minecart": { "x": 100, "y": 64, "z": 111, "yaw": 180, "pitch": 0, "label": "矿车点" },
+  "trash": { "yaw": 180, "pitch": 0, "label": "垃圾投掷方向（自 base 站位推算）" },
+  "base": { "x": 100, "y": 64, "z": 110, "yaw": 180, "pitch": 0, "label": "基地" },
+  "minecart": { "yaw": 0, "pitch": -20, "label": "矿车投掷方向（自 base 站位推算）" },
   "button": { "x": 101, "y": 65, "z": 111, "label": "领取按钮" },
   "ready": { "x": 100, "y": 64, "z": 109, "yaw": 180, "pitch": 0, "label": "准备出发点" },
   "readyButton": { "x": 102, "y": 65, "z": 109, "label": "准备按钮" }
@@ -409,7 +446,7 @@ plugins:
   "description": "itemsorter 点位文件。配置相关的条件必填见生成规范第 5 节。",
   "type": "object",
   "additionalProperties": false,
-  "required": ["collector", "minecart"],
+  "required": ["base"],
   "properties": {
     "items": {
       "type": "array",
@@ -422,9 +459,9 @@ plugins:
       "items": { "$ref": "#/definitions/match" }
     },
     "home": { "$ref": "#/definitions/point" },
-    "trash": { "$ref": "#/definitions/point" },
-    "collector": { "$ref": "#/definitions/point" },
-    "minecart": { "$ref": "#/definitions/point" },
+    "trash": { "$ref": "#/definitions/direction" },
+    "base": { "$ref": "#/definitions/point" },
+    "minecart": { "$ref": "#/definitions/direction" },
     "button": { "$ref": "#/definitions/blockPoint" },
     "ready": { "$ref": "#/definitions/readyPoint" },
     "readyButton": { "$ref": "#/definitions/blockPoint" }
@@ -443,6 +480,16 @@ plugins:
         "label": { "type": "string" },
         "area": { "type": "string" },
         "side": { "type": "string" }
+      }
+    },
+    "direction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["yaw", "pitch"],
+      "properties": {
+        "yaw": { "type": "number" },
+        "pitch": { "type": "number" },
+        "label": { "type": "string" }
       }
     },
     "readyPoint": {
@@ -494,7 +541,12 @@ plugins:
         "customNameRegex": { "type": "string", "minLength": 1 },
         "lore": { "type": "string", "minLength": 1, "pattern": "\\S" },
         "loreRegex": { "type": "string", "minLength": 1 },
-        "potionId": { "type": "integer", "minimum": 0 },
+        "potionId": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "string", "minLength": 1, "pattern": "\\S" }
+          ]
+        },
         "effects": {
           "type": "array",
           "minItems": 1,
@@ -534,38 +586,41 @@ plugins:
 ```text
 function generate(input):
   config = input.config
-  assert input.points.collector != null
-  assert input.points.minecart != null
+  assert input.points.base != null
   if config.homeMode == "walk":          assert input.points.home != null
   if config.acquireMode == "button":     assert input.points.button != null
+  if config.source != "water":           assert input.points.minecart != null
   if config.readyAction.enabled:         assert input.points.ready != null
                                          assert input.points.readyButton != null
 
   if input.points.button != null and config.acquireMode == "button":
-    horizontal = hypot(button.x - collector.x, button.z - collector.z)
-    vertical   = abs(button.y - collector.y)
+    horizontal = hypot(button.x - base.x, button.z - base.z)
+    vertical   = abs(button.y - base.y)
     assert horizontal <= 3 and vertical <= 2
 
-  rules = input.rules ordered by intended priority
-  for each rule:
-    assert rule.match is non-empty
-    assert not (name and nameRegex)
-    assert not (customName and customNameRegex)
-    assert not (lore and loreRegex)
-    assert rule.match.enchantments is empty or all levels >= 1
-    assert rule.match.effects is empty or non-empty array
-    assert every regex compiles in JavaScript
-    assert rule.point has x, y, z, yaw, pitch
-
-  assert no duplicate match conditions
-  assert no generic rule shadows a more specific rule
+  if config.source == "water":
+    rules = input.rules ordered by intended priority
+    for each rule:
+      assert rule.match is non-empty
+      assert not (name and nameRegex)
+      assert not (customName and customNameRegex)
+      assert not (lore and loreRegex)
+      assert rule.match.enchantments is empty or all levels >= 1
+      assert rule.match.effects is empty or non-empty array
+      assert every regex compiles in JavaScript
+      assert rule.point has x, y, z, yaw, pitch
+    assert no duplicate match conditions
+    assert no generic rule shadows a more specific rule
+  else:
+    rules = rules excluding those matching the pump minecart type
+             // 矿车来源：命中对应矿车物品的规则被忽略，其余规则照常输出
 
   output = {
     items: rules.map(toRule),
     home: points.home?,
-    trash: points.trash?,
-    collector: points.collector,
-    minecart: points.minecart,
+    trash: points.trash?,        // Direction：仅 yaw/pitch
+    base: points.base,
+    minecart: points.minecart?,  // Direction：仅 yaw/pitch；source 为矿车时必填
     button: points.button?,
     ready: points.ready?,
     readyButton: points.readyButton?

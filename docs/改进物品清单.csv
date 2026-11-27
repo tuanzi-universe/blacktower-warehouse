@@ -66,7 +66,7 @@ beacon,信标,C-R,C-R WORK:beacon,同区调整
 bee_nest,蜂巢,G-R,G-L PLANT:bee_nest,重新归位
 beef,生牛肉,G-R,G-L FOOD:beef,重新归位
 beehive,蜂箱,G-R,G-L PLANT:bee_nest,重新归位
-beetroot,甜菜根,F-R,F-R CROP:beetroot,同区调整
+beetroot,龙泪（甜菜根）,F-R,D-R CUSTOM:dragon_tear | F-R CROP:beetroot,自定义名新增
 beetroot_seeds,甜菜种子,F-R,F-R CROP:beetroot_seeds,同区调整
 beetroot_soup,甜菜汤,G-R,G-L FOOD:beetroot_soup,重新归位
 bell,钟,C-R,C-R WORK:bell,同区调整

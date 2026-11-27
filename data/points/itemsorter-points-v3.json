@@ -5216,6 +5216,22 @@
     },
     {
       "match": {
+        "name": "minecraft:beetroot",
+        "customName": "龙泪"
+      },
+      "point": {
+        "x": 5318.5,
+        "y": 115,
+        "z": -37676.5,
+        "yaw": 0,
+        "pitch": 0,
+        "label": "龙泪",
+        "area": "D",
+        "side": "R"
+      }
+    },
+    {
+      "match": {
         "name": "minecraft:deepslate_coal_ore"
       },
       "point": {
@@ -28201,24 +28217,18 @@
     }
   ],
   "trash": {
-    "x": 5211.5,
-    "y": 115,
-    "z": -37744.5,
     "yaw": 90,
     "pitch": -10
   },
-  "minecart": {
-    "x": 5213.5,
-    "y": 115,
-    "z": -37742.5,
-    "yaw": 0,
-    "pitch": 0
-  },
-  "collector": {
+  "base": {
     "x": 5211.5,
     "y": 115,
     "z": -37744.5,
     "yaw": 180,
+    "pitch": 0
+  },
+  "minecart": {
+    "yaw": -90,
     "pitch": 0
   },
   "button": {

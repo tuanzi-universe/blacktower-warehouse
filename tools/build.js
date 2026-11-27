@@ -478,6 +478,16 @@ for (const u of terrainOriginals) {
 }
 unitInstances = unitInstances.filter(u => !u.id.startsWith('TERRAIN:'));
 
+// 自定义名称物品：同一物品 ID 按 customName 分流到独立单元
+const customNameUnits = [
+  {
+    id: 'CUSTOM:dragon_tear', area: 'D', side: 'R', entry_type: 'item',
+    group: '收藏', cn: '龙泪', family: 'CUSTOM:dragon_tear',
+    rep: 'beetroot', items: ['beetroot'], customName: '龙泪',
+  },
+];
+unitInstances.push(...customNameUnits);
+
 // ---------- 7. 分区装配（v3）----------
 const byId = id => {
   const u = unitInstances.find(x => x.id === id);
@@ -565,6 +575,7 @@ const dR = [
   byId('COLLECT:sherd'),
   byId('COLLECT:painting'),
   byId('COLLECT:flower_pot'),
+  byId('CUSTOM:dragon_tear'),
 ];
 
 // E 区：药水 + 玻璃瓶
@@ -733,7 +744,7 @@ const counts = [
   ['染料', COLOR_NAMES.length, 16],
   ['床旗图案蜡烛坐垫', bedUnits.length, 5],
   ['潜影盒', shulkerUnits.length, 2],
-  ['D-R', dR.length, 54],
+  ['D-R', dR.length, 55],
   ['附魔', enchantUnits.length, 44],
   ['正面药水', fLPotions.length, 20],
   ['负面药水', fRPotions.length, 20],
@@ -779,7 +790,7 @@ for (const u of unitInstances.filter(x => x.id.startsWith('BUILD:base_'))) {
 const SIDE_ORDER = ['A-L', 'A-R', 'B-L', 'B-R', 'C-L', 'C-R', 'D-L', 'D-R', 'E-L', 'E-R', 'F-L', 'F-R', 'G-L', 'G-R', 'H-L', 'H-R'];
 const expectLen = {
   'A-L': 32, 'A-R': 27, 'B-L': 48, 'B-R': 53, 'C-L': 21, 'C-R': 27,
-  'D-L': 44, 'D-R': 54, 'E-L': 21, 'E-R': 20, 'F-L': 44, 'F-R': 33,
+  'D-L': 44, 'D-R': 55, 'E-L': 21, 'E-R': 20, 'F-L': 44, 'F-R': 33,
   'G-L': 51, 'G-R': 44, 'H-L': 50, 'H-R': 54,
 };
 const globalSeen = new Set();
@@ -799,7 +810,7 @@ for (const key of SIDE_ORDER) {
 for (const u of unitInstances) {
   if (!globalSeen.has(u.id)) throw new Error(`源单元未分配 ${u.id}`);
 }
-if (globalSeen.size !== 623) throw new Error(`分配单元 ${globalSeen.size}，应为 623`);
+if (globalSeen.size !== 624) throw new Error(`分配单元 ${globalSeen.size}，应为 624`);
 unitInstances = SIDE_ORDER.flatMap(key => bySide.get(key));
 
 const placed = new Map();
@@ -868,7 +879,14 @@ itemUnits.sort((a, b) => {
   const ak = `${a.area}${a.side}`.localeCompare(`${b.area}${b.side}`);
   return ak || a.slot - b.slot;
 });
+// 自定义名称特例排在同名通用规则之前（首条命中）
+for (const u of itemUnits.filter(x => x.customName)) {
+  for (const item of u.items) {
+    pushRule({ name: `minecraft:${item}`, customName: u.customName }, u);
+  }
+}
 for (const u of itemUnits) {
+  if (u.customName) continue;
   for (const item of itemOrder(u)) {
     pushRule({ name: `minecraft:${item}` }, u);
   }
@@ -876,17 +894,42 @@ for (const u of itemUnits) {
 
 // ---------- 11. 特殊点位与黑名单 ----------
 const botPoints = JSON.parse(fs.readFileSync(BOT_CONFIG, 'utf8'));
-const special = {
-  trash: botPoints.trash,
-  minecart: botPoints.minecart,
-  collector: botPoints.collector,
-  button: botPoints.button,
-  ready: botPoints.ready,
-  readyButton: botPoints.readyButton,
+if (!botPoints.base) throw new Error('bot 配置缺少 base 点位（旧格式请先在 bot 目录运行迁移）');
+const pickPoint = (k, fields) => {
+  const p = botPoints[k];
+  if (!p || typeof p !== 'object') throw new Error(`缺少特殊点位 ${k}`);
+  for (const f of fields) {
+    if (typeof p[f] !== 'number' || !Number.isFinite(p[f])) throw new Error(`${k}.${f} 无效`);
+  }
+  return p;
 };
-for (const k of ['trash', 'minecart', 'collector', 'button', 'ready', 'readyButton']) {
-  if (!special[k]) throw new Error(`缺少特殊点位 ${k}`);
-}
+const walkPoint = k => {
+  const p = pickPoint(k, ['x', 'y', 'z', 'yaw', 'pitch']);
+  const o = { x: p.x, y: p.y, z: p.z, yaw: p.yaw, pitch: p.pitch };
+  for (const f of ['label', 'area', 'side']) if (p[f] !== undefined) o[f] = p[f];
+  return o;
+};
+const blockPoint = k => {
+  const p = pickPoint(k, ['x', 'y', 'z']);
+  const o = { x: p.x, y: p.y, z: p.z };
+  if (p.label !== undefined) o.label = p.label;
+  return o;
+};
+const direction = k => {
+  const p = pickPoint(k, ['yaw', 'pitch']);
+  const o = { yaw: p.yaw, pitch: p.pitch };
+  if (p.label !== undefined) o.label = p.label;
+  return o;
+};
+const special = {
+  base: walkPoint('base'),
+  trash: direction('trash'),
+  minecart: direction('minecart'),
+  button: blockPoint('button'),
+  ready: walkPoint('ready'),
+  readyButton: blockPoint('readyButton'),
+};
+if (botPoints.home) special.home = walkPoint('home');
 const DEFAULT_BLACKLIST = [{ name: 'minecraft:wooden_hoe' }];
 const blacklist = Array.isArray(botPoints.blacklist) ? botPoints.blacklist : DEFAULT_BLACKLIST;
 if (!Array.isArray(blacklist)) throw new Error('blacklist 必须是数组');
@@ -896,12 +939,18 @@ for (let i = 0; i < blacklist.length; i++) {
     throw new Error(`blacklist[${i}] 不是有效的 Match object`);
   }
 }
-if (blacklist.length && !special.trash) throw new Error('blacklist 非空但缺少 trash 点位');
+if (blacklist.length && !special.trash) throw new Error('blacklist 非空但缺少 trash 投掷方向');
 
 const pointsFile = {
   items: rules,
   blacklist,
-  ...special,
+  ...(special.home ? { home: special.home } : {}),
+  trash: special.trash,
+  base: special.base,
+  minecart: special.minecart,
+  button: special.button,
+  ready: special.ready,
+  readyButton: special.readyButton,
 };
 
 // ---------- 12. 校验 ----------
@@ -922,9 +971,9 @@ for (const r of rules) {
     if (typeof p[f] !== 'number' || !Number.isFinite(p[f])) throw new Error(`点位字段无效 ${f}`);
   }
 }
-const bh = Math.hypot(special.button.x - special.collector.x, special.button.z - special.collector.z);
-const bv = Math.abs(special.button.y - special.collector.y);
-if (bh > 3 || bv > 2) throw new Error(`按钮距离 collector 过远: ${bh.toFixed(2)}/${bv}`);
+const bh = Math.hypot(special.button.x - special.base.x, special.button.z - special.base.z);
+const bv = Math.abs(special.button.y - special.base.y);
+if (bh > 3 || bv > 2) throw new Error(`按钮距离 base 过远: ${bh.toFixed(2)}/${bv}`);
 const rr = Math.hypot(special.ready.x - special.readyButton.x, special.ready.z - special.readyButton.z);
 if (rr > 4.5) throw new Error(`ready 与 readyButton 距离 ${rr.toFixed(2)} > 4.5`);
 
@@ -973,7 +1022,11 @@ const itemRows = [];
 for (const u of unitInstances) {
   if (u.entry_type === 'item') {
     for (const item of u.items) {
-      itemRows.push([item, itemCn.get(item) || '', 'item', u.id, u.area, u.side, u.slot, 'name', item]);
+      if (u.customName) {
+        itemRows.push([item, u.customName, 'item', u.id, u.area, u.side, u.slot, 'customName', u.customName]);
+      } else {
+        itemRows.push([item, itemCn.get(item) || '', 'item', u.id, u.area, u.side, u.slot, 'name', item]);
+      }
     }
   } else if (u.entry_type === 'enchant') {
     if (u.enchant) {

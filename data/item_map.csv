@@ -918,6 +918,7 @@ skull_pottery_sherd,头颅纹样陶片,item,COLLECT:sherd,D,R,52,name,skull_pott
 snort_pottery_sherd,嗅探纹样陶片,item,COLLECT:sherd,D,R,52,name,snort_pottery_sherd
 painting,画,item,COLLECT:painting,D,R,53,name,painting
 flower_pot,花盆,item,COLLECT:flower_pot,D,R,54,name,flower_pot
+beetroot,龙泪,item,CUSTOM:dragon_tear,D,R,55,customName,龙泪
 glass_bottle,玻璃瓶,item,RAW:glass_bottle,E,L,1,name,glass_bottle
 potion,药水,potion,POTION:instant_health,E,L,2,effects,5:instant_health
 splash_potion,喷溅药水,potion,POTION:instant_health,E,L,2,effects,5:instant_health

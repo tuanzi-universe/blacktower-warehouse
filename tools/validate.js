@@ -12,6 +12,7 @@ const rules = j.items;
 
 const problems = [];
 const nameOnly = new Map();
+const customNamed = new Map();
 const special = { enchanted_book: 0, potion: 0, splash_potion: 0, lingering_potion: 0, tipped_arrow: 0 };
 for (const r of rules) {
   const m = r.match;
@@ -26,11 +27,22 @@ for (const r of rules) {
   } else if (m.potionId !== undefined) {
     if (!['potion', 'splash_potion', 'lingering_potion', 'tipped_arrow'].includes(name)) problems.push('potionId rule on non-potion: ' + name);
     special[name]++;
+  } else if (m.customName || m.customNameRegex) {
+    if (customNamed.has(name)) problems.push('duplicate customName rule: ' + name);
+    customNamed.set(name, r);
   } else {
     if (special[name] !== undefined) special[name]++;
     if (nameOnly.has(name)) problems.push('duplicate name-only rule: ' + name);
     nameOnly.set(name, r);
   }
+}
+
+// 自定义名称规则：必须有同名通用兜底，且排在其前面
+for (const [name, r] of customNamed) {
+  if (!all.has(name)) problems.push('customName rule for unknown item: ' + name);
+  const generic = nameOnly.get(name);
+  if (!generic) problems.push('customName rule without generic fallback: ' + name);
+  else if (rules.indexOf(r) > rules.indexOf(generic)) problems.push('customName rule after generic name rule: ' + name);
 }
 
 for (const item of obtainable) {

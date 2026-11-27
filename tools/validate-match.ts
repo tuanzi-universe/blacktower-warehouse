@@ -35,7 +35,8 @@ function check(label: string, actual: boolean, expected: boolean) {
   checks.push([label, actual, expected]);
 }
 
-const coal = find('coal');
+const coal = loaded.rules.find(r => r.match.name === 'coal');
+if (!coal) throw new Error('coal rule not found');
 check('coal name', matchItem(makeItem('coal', 1), coal.match, ctx), true);
 check('iron is not coal', matchItem(makeItem('iron_ingot', 1), coal.match, ctx), false);
 
@@ -78,6 +79,15 @@ const tippedArrowSpeed = makeItem('tipped_arrow', 1, [
 check('tipped arrow speed -> effect unit', matchItem(tippedArrowSpeed, tippedSpeed.match, ctx), true);
 const plainArrowMatched = loaded.rules.some(r => matchItem(makeItem('tipped_arrow', 1), r.match, ctx));
 check('plain tipped arrow has no fallback', plainArrowMatched, false);
+
+const dragonTear = loaded.rules.find(r => r.match.name === 'beetroot' && r.match.customName === '龙泪');
+if (!dragonTear) throw new Error('beetroot customName 龙泪 rule not found');
+const tear = makeItem('beetroot', 1, [{ type: 'custom_name', data: { text: '龙泪' } }]);
+check('beetroot customName 龙泪', matchItem(tear, dragonTear.match, ctx), true);
+check('plain beetroot is not 龙泪', matchItem(makeItem('beetroot', 1), dragonTear.match, ctx), false);
+const plainBeetroot = loaded.rules.find(r => r.match.name === 'beetroot' && !r.match.customName);
+if (!plainBeetroot) throw new Error('plain beetroot rule not found');
+check('plain beetroot matches fallback', matchItem(makeItem('beetroot', 1), plainBeetroot.match, ctx), true);
 
 let failed = 0;
 for (const [label, actual, expected] of checks) {

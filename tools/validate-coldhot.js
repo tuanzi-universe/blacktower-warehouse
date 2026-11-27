@@ -126,7 +126,7 @@ function labelsOfV3(area, side) {
 // ---------- v3 总量 / 每侧 ----------
 const expectSide = {
   'A-L': 32, 'A-R': 27, 'B-L': 48, 'B-R': 53, 'C-L': 21, 'C-R': 27,
-  'D-L': 44, 'D-R': 54, 'E-L': 21, 'E-R': 20, 'F-L': 44, 'F-R': 33,
+  'D-L': 44, 'D-R': 55, 'E-L': 21, 'E-R': 20, 'F-L': 44, 'F-R': 33,
   'G-L': 51, 'G-R': 44, 'H-L': 50, 'H-R': 54,
 };
 const sideCount = {};
@@ -137,13 +137,13 @@ for (const u of units) {
 for (const [k, n] of Object.entries(expectSide)) {
   assert((sideCount[k] || 0) === n, `${k} 单元 ${sideCount[k] || 0}，应为 ${n}`);
 }
-assert(units.length === 623, `单元总数 ${units.length}，应为 623`);
-assert(units.filter(u => u.type === 'item').length === 539, `物品单元 ${units.filter(u => u.type === 'item').length}，应为 539`);
+assert(units.length === 624, `单元总数 ${units.length}，应为 624`);
+assert(units.filter(u => u.type === 'item').length === 540, `物品单元 ${units.filter(u => u.type === 'item').length}，应为 540`);
 assert(units.filter(u => u.type === 'enchant').length === 44, '附魔单元应为 44');
 assert(units.filter(u => u.type === 'potion').length === 40, '药水单元应为 40');
 const slotRows = readCsv('data/partition_new.csv');
 assert(slotRows.length === 880, `partition_new 行数 ${slotRows.length}，应为 880`);
-assert(slotRows.filter(r => r.unit_id).length === 623, 'partition_new 占用格应为 623');
+assert(slotRows.filter(r => r.unit_id).length === 624, 'partition_new 占用格应为 624');
 // v2 冻结文件完整性
 assert(v2fUnits.length === 581, `冻结 v2 单元 ${v2fUnits.length}，应为 581`);
 assert(v1Units.length === 575, `冻结 v1 单元 ${v1Units.length}，应为 575`);
@@ -157,7 +157,7 @@ const auxUnits = units.filter(u => !hotUnits.includes(u) && ['A', 'C', 'E', 'G']
 const coldAreaUnits = units.filter(u => ['B', 'D', 'F', 'H'].includes(u.area));
 assert(hotUnits.length === 189, `热单元 ${hotUnits.length}，应为 189（矿物 32 + 红石 21 + 药水 41 + G 95）`);
 assert(auxUnits.length === 54, `热区附属单元 ${auxUnits.length}，应为 54（A-R 27 + C-R 27，含船/门/活板门）`);
-assert(coldAreaUnits.length === 380, `冷区 B/D/F/H 单元 ${coldAreaUnits.length}，应为 380`);
+assert(coldAreaUnits.length === 381, `冷区 B/D/F/H 单元 ${coldAreaUnits.length}，应为 381`);
 assert(hotUnits.filter(u => u.id.startsWith('MIN:')).length === 32, '矿物热单元应为 32');
 assert(hotUnits.filter(u => u.id.startsWith('RED:')).length === 21, '红石热单元应为 21');
 assert(hotUnits.filter(u => u.type === 'potion').length === 40, '热区药水单元应为 40');
@@ -291,6 +291,7 @@ const anchors = [
   ['D-R', 45, '告示牌（含悬挂式）'], ['D-R', 46, '展示架'], ['D-R', 47, '书架'],
   ['D-R', 48, '纸'], ['D-R', 49, '书'], ['D-R', 50, '火把/灯笼'],
   ['D-R', 51, '饰纹陶罐'], ['D-R', 52, '陶片'], ['D-R', 53, '画'], ['D-R', 54, '花盆'],
+  ['D-R', 55, '龙泪'],
   // F-L：郁金香/火把花/蘑菇拆分
   ['F-L', 1, '蒲公英'], ['F-L', 6, '红郁金香'], ['F-L', 9, '粉郁金香'],
   ['F-L', 19, '火把花'], ['F-L', 20, '火把花种子'],
@@ -300,6 +301,7 @@ const anchors = [
   ['F-R', 1, '枯草丛'], ['F-R', 6, '海带'], ['F-R', 7, '海带块（含干海带）'],
   ['F-R', 8, '管珊瑚'], ['F-R', 12, '角珊瑚'], ['F-R', 13, '瓶子草'],
   ['F-R', 14, '小麦'], ['F-R', 15, '小麦种子'], ['F-R', 16, '干草捆'],
+  ['F-R', 19, '甜菜根'], ['F-R', 20, '甜菜种子'],
   ['F-R', 21, '南瓜'], ['F-R', 22, '南瓜种子'], ['F-R', 23, '西瓜'], ['F-R', 24, '西瓜种子（含西瓜片）'],
   ['F-R', 25, '甘蔗'], ['F-R', 26, '糖'],
   ['F-R', 31, '紫颂果'], ['F-R', 32, '紫颂花'], ['F-R', 33, '爆裂果'],
@@ -369,6 +371,8 @@ eqItems('玻璃', ['glass', 'glass_pane']);
 eqItems('遮光玻璃', ['tinted_glass']);
 eqItems('导航', ['compass', 'recovery_compass']);
 eqItems('时钟', ['clock']);
+eqItems('龙泪', ['beetroot']);
+eqItems('甜菜根', ['beetroot']);
 eqItems('烟花火箭', ['firework_rocket']);
 eqItems('烟火之星', ['firework_star']);
 eqItems('告示牌（含悬挂式）', units.filter(u => u.id === 'BUILD:v_sign').flatMap(u => u.items));
@@ -489,7 +493,7 @@ const hotStat = stats(hotUnits);
 const coldStat = stats(coldAreaUnits);
 
 console.log('== 冷热库区校验（v3） ==');
-console.log(`单元 ${units.length}（物品 535 / 附魔 44 / 药水 40），规则 1829`);
+console.log(`单元 ${units.length}（物品 ${units.filter(u => u.type === 'item').length} / 附魔 44 / 药水 40），规则 ${JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'points', 'itemsorter-points.json'), 'utf8')).items.length}`);
 console.log(`热区占用 ${hotUnits.length + auxUnits.length}：A ${sideCount['A-L'] + sideCount['A-R']}，C ${sideCount['C-L'] + sideCount['C-R']}，E ${sideCount['E-L'] + sideCount['E-R']}，G ${sideCount['G-L'] + sideCount['G-R']}；热单元 ${hotUnits.length}`);
 console.log(`冷区 B/D/F/H ${coldAreaUnits.length}：B ${sideCount['B-L'] + sideCount['B-R']}，D ${sideCount['D-L'] + sideCount['D-R']}，F ${sideCount['F-L'] + sideCount['F-R']}，H ${sideCount['H-L'] + sideCount['H-R']}`);
 console.log(`H 区（合并区）：L ${sideCount['H-L']} / R ${sideCount['H-R']}；磨制拆单 10、告示牌 26 件、展示架 13 件、船/门/活板门 ${boat ? boat.items.length : 0} 件`);
